@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% block content %}
+{% for result in results %}
+<div class="bs-callout bs-callout-primary">
+    <h4>Matched Analysis <a href="/analysis/{{ result.analysis_id }}">{{ result.analysis_id }}</a></h4>
+    [<a href="/analysis/{{ result.analysis_id }}">Analysis</a> - <a
+        href="/hunting/pcap/{{ result.analysis_id }}">PCAP</a>]
+    <br/>
+    Signature Id: {{ result.alert.signature_id }}
+    <br/>
+    Signature: {{ result.alert.signature }}
+</div>
+{% endfor %}
+{% endblock %}

@@ -16,6 +16,9 @@
                     <a class="btn btn-info btn-xs" href="{% url "submission.views.resubmit" analysis.info.id %}">
                         <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Resubmit sample
                     </a>
+                    <a class="btn btn-info btn-xs" href="{% url "analysis.views.tldr" analysis.info.id %}" target="_blank">
+                        <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> TLDR
+                    </a>
                     </span>
                 {% endif %}
                 </td>
@@ -52,6 +55,10 @@
             <tr>
                 <th class="text-right">ssdeep</th>
                 <td class="break-everywhere"><tt>{{analysis.target.file.ssdeep}}</tt></td>
+            </tr>
+            <tr>
+                <th class="text-right">Route</th>
+                <td class="break-everywhere"><tt>{{analysis.info.route}}</tt></td>
             </tr>
             {% if analysis.static.pdb_path %}
             <tr>

@@ -7,6 +7,7 @@ import os
 import sys
 
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -45,6 +46,8 @@ def dropped_filepath(task_id, sha1):
 
     raise ObjectDoesNotExist
 
+
+@login_required
 def render_index(request, kwargs={}):
     files = os.listdir(os.path.join(settings.CUCKOO_PATH, "analyzer", "windows", "modules", "packages"))
 
@@ -85,6 +88,8 @@ def render_index(request, kwargs={}):
     values.update(kwargs)
     return render(request, "submission/index.html", values)
 
+
+@login_required
 def index(request, task_id=None, sha1=None):
     if request.method == "GET":
         return render_index(request)
@@ -117,6 +122,7 @@ def index(request, task_id=None, sha1=None):
     if not request.POST.get("human"):
         options["human"] = "0"
 
+    tlp = request.POST.get('tlp')
     db = Database()
     task_ids = []
     task_machines = []
@@ -141,7 +147,9 @@ def index(request, task_id=None, sha1=None):
                                   custom=custom,
                                   memory=memory,
                                   enforce_timeout=enforce_timeout,
-                                  tags=tags)
+                                  tags=tags,
+                                  owner=request.user.username if request.user.is_authenticated else "",
+                                  tlp=tlp)
             if task_id:
                 task_ids.append(task_id)
 
@@ -177,7 +185,9 @@ def index(request, task_id=None, sha1=None):
                                       custom=custom,
                                       memory=memory,
                                       enforce_timeout=enforce_timeout,
-                                      tags=tags)
+                                      tags=tags,
+                                      owner=request.user.username if request.user.is_authenticated else "",
+                                      tlp=tlp)
                 if task_id:
                     task_ids.append(task_id)
 
@@ -195,7 +205,9 @@ def index(request, task_id=None, sha1=None):
                                   custom=custom,
                                   memory=memory,
                                   enforce_timeout=enforce_timeout,
-                                  tags=tags)
+                                  tags=tags,
+                                  owner=request.user.username if request.user.is_authenticated else "",
+                                  tlp=tlp)
             if task_id:
                 task_ids.append(task_id)
 
@@ -216,7 +228,9 @@ def index(request, task_id=None, sha1=None):
                                  custom=custom,
                                  memory=memory,
                                  enforce_timeout=enforce_timeout,
-                                 tags=tags)
+                                 tags=tags,
+                                 owner=request.user.username if request.user.is_authenticated else "",
+                                 tlp=tlp)
             if task_id:
                 task_ids.append(task_id)
 
@@ -232,6 +246,8 @@ def index(request, task_id=None, sha1=None):
             "error": "Error adding task to Cuckoo's database.",
         })
 
+
+@login_required
 def status(request, task_id):
     task = Database().view_task(task_id)
     if not task:
@@ -247,6 +263,8 @@ def status(request, task_id):
         "task_id": task_id,
     })
 
+
+@login_required
 def resubmit(request, task_id):
     task = Database().view_task(task_id)
 
@@ -272,6 +290,8 @@ def resubmit(request, task_id):
             "options": emit_options(task.options),
         })
 
+
+@login_required
 def submit_dropped(request, task_id, sha1):
     if request.method == "POST":
         return index(request, task_id, sha1)

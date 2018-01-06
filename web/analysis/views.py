@@ -5,17 +5,20 @@
 
 import calendar
 import datetime
-import sys
-import re
-import os
 import json
+import os
+import re
+import sys
 import urllib
 import zipfile
 
 from cStringIO import StringIO
 
+from bson.objectid import ObjectId
 from django.conf import settings
 from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required, user_passes_test
+
 from django.shortcuts import render, redirect
 from django.views.decorators.http import require_safe
 from django.views.decorators.csrf import csrf_exempt
@@ -24,31 +27,75 @@ import pymongo
 from bson.objectid import ObjectId
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from gridfs import GridFS
+from web.tlp_methods import get_tlp_users, create_tlp_query
 
 sys.path.insert(0, settings.CUCKOO_PATH)
 
 from lib.cuckoo.core.database import Database, TASK_PENDING, TASK_COMPLETED
 from lib.cuckoo.common.utils import store_temp_file, versiontuple
 from lib.cuckoo.common.constants import CUCKOO_ROOT, LATEST_HTTPREPLAY
+from lib.tldr.tldr import run_tldr
 import modules.processing.network as network
+from helpers import convert_hit_to_template
+from pymongo import MongoClient
+from elasticsearch import Elasticsearch
+
 
 results_db = settings.MONGO
 fs = GridFS(results_db)
+domains = set()
+for domain in open(os.path.join(CUCKOO_ROOT, "data", "whitelist", "domain.txt")):
+    domains.add(domain.strip())
+
+def getMongoObj(taskid):
+	#TODO: Make Mongo host config-based
+    mdb = "10.200.10.21:27017"
+    client = MongoClient(mdb)
+    db = client.cuckoo
+    cursor = db.analysis.find({"info.id": taskid},{"behavior.processes": "1","network.http_ex": "1", "network.https_ex":"1"})
+    return cursor
 
 @require_safe
+@login_required
 def index(request):
     db = Database()
-    tasks_files = db.list_tasks(limit=50, category="file", not_status=TASK_PENDING)
-    tasks_urls = db.list_tasks(limit=50, category="url", not_status=TASK_PENDING)
-
+    # TODO: add stuff for when user is not logged in
+    tasks_files = db.list_tasks(limit=200, category="file", not_status=TASK_PENDING, tlpuser=request.user.username,
+                                tlpamberusers=get_tlp_users(request.user))
+    tasks_urls = db.list_tasks(limit=200, category="url", not_status=TASK_PENDING, tlpuser=request.user.username,
+                               tlpamberusers=get_tlp_users(request.user))
+	#TODO: Make ES host config-based 							   
+    es = Elasticsearch('bm-es0:9200')
+    yara_query = create_tlp_query(request.user, {"term": {"_type": "yara"}})
+    suri_query = create_tlp_query(request.user, {"term": {"_type": "suricata"}})
+    tasks_yhunts = es.search(index="hunt-*", body=yara_query)
+    tasks_surihunts = es.search(index="hunt-*", body=suri_query)
     analyses_files = []
     analyses_urls = []
-
+    analyses_yhunts = [convert_hit_to_template(c) for c in tasks_yhunts['hits']['hits']]
+    analyses_surihunts = [convert_hit_to_template(c) for c in tasks_surihunts['hits']['hits']]
     if tasks_files:
         for task in tasks_files:
             new = task.to_dict()
             new["sample"] = db.view_sample(new["sample_id"]).to_dict()
-
+            mobj = getMongoObj(new["id"])
+            for m in mobj:
+                if 'behavior' in m:
+                    new["processes"] = m["behavior"]["processes"]
+                myhttps= []
+                if ('network' in m) and ('https_ex' in m["network"]):
+                    for mht in m["network"]["https_ex"]:
+                        if mht["host"] not in domains:
+                            myhttps.append(mht)
+                myhttp=[]
+                if ('network' in m) and ('http_ex' in m["network"]):
+                    for mh in m["network"]["http_ex"]:
+                        if mh["host"] not in domains:
+                            myhttp.append(mh)
+                if myhttps:
+                    new["https"] = myhttps
+                if myhttp:
+                    new["http"] = myhttp
             filename = os.path.basename(new["target"])
             new.update({"filename": filename})
 
@@ -65,13 +112,17 @@ def index(request):
                 new["errors"] = True
 
             analyses_urls.append(new)
-
+    analyses_yhunts.sort(reverse=True)
     return render(request, "analysis/index.html", {
         "files": analyses_files,
         "urls": analyses_urls,
+        "yara_hunts": analyses_yhunts,
+        "suri_hunts": analyses_surihunts
     })
 
+
 @require_safe
+@login_required
 def pending(request):
     db = Database()
     tasks = db.list_tasks(status=TASK_PENDING)
@@ -84,10 +135,12 @@ def pending(request):
         "tasks": pending,
     })
 
+
 @require_safe
+@login_required
 def chunk(request, task_id, pid, pagenum):
     try:
-        pid, pagenum = int(pid), int(pagenum)-1
+        pid, pagenum = int(pid), int(pagenum) - 1
     except:
         raise PermissionDenied
 
@@ -128,7 +181,9 @@ def chunk(request, task_id, pid, pagenum):
         "chunk": chunk,
     })
 
+
 @require_safe
+@login_required
 def filtered_chunk(request, task_id, pid, category):
     """Filters calls for call category.
     @param task_id: cuckoo task id
@@ -179,7 +234,9 @@ def filtered_chunk(request, task_id, pid, category):
         "chunk": filtered_process,
     })
 
+
 @csrf_exempt
+@login_required
 def search_behavior(request, task_id):
     if request.method != "POST":
         raise PermissionDenied
@@ -247,13 +304,26 @@ def search_behavior(request, task_id):
         "results": results,
     })
 
+
 @require_safe
+@login_required
 def report(request, task_id):
     report = results_db.analysis.find_one({"info.id": int(task_id)}, sort=[("_id", pymongo.DESCENDING)])
 
     if not report:
         return render(request, "error.html", {
             "error": "The specified analysis does not exist",
+        })
+
+    if not request.user.is_authenticated \
+            or 'tlp' not in report['info'] \
+            or not (report['info']['tlp'] == 'green'
+                    or (
+                                report['info']['tlp'] == 'amber' and report['info']['owner'] in get_tlp_users(
+                            request.user)) \
+                            or (report['info']['tlp'] == 'red' and report['info']['owner'] == request.user.username)):
+        return render(request, "error.html", {
+            "error": "You are not tall enough to ride the ride.",
         })
 
     # Creating dns information dicts by domain and ip.
@@ -294,12 +364,16 @@ def report(request, task_id):
         },
     })
 
+
 @require_safe
+@login_required
 def latest_report(request):
     rep = results_db.analysis.find_one({}, sort=[("_id", pymongo.DESCENDING)])
     return report(request, rep["info"]["id"] if rep else 0)
 
+
 @require_safe
+@login_required
 def file(request, category, object_id):
     file_item = fs.get(ObjectId(object_id))
 
@@ -322,6 +396,14 @@ def file(request, category, object_id):
             "error": "File not found",
         })
 
+
+@require_safe
+@login_required
+def tldr(request, object_id):
+    outStr = run_tldr(object_id, request.user, False)
+    return HttpResponse(outStr, content_type="application/json")
+
+
 moloch_mapper = {
     "ip": "ip == %s",
     "host": "host == %s",
@@ -332,7 +414,9 @@ moloch_mapper = {
     "sid": 'tags == "sid:%s"',
 }
 
+
 @require_safe
+@login_required
 def moloch(request, **kwargs):
     if not settings.MOLOCH_ENABLED:
         return render(request, "error.html", {
@@ -363,7 +447,9 @@ def moloch(request, **kwargs):
     )
     return redirect(url)
 
+
 @require_safe
+@login_required
 def full_memory_dump_file(request, analysis_number):
     file_path = os.path.join(CUCKOO_ROOT, "storage", "analyses", str(analysis_number), "memory.dmp")
     if os.path.exists(file_path):
@@ -375,6 +461,7 @@ def full_memory_dump_file(request, analysis_number):
         return render(request, "error.html", {
             "error": "File not found",
         })
+
 
 def _search_helper(obj, k, value):
     r = []
@@ -393,7 +480,9 @@ def _search_helper(obj, k, value):
 
     return r
 
+
 @csrf_exempt
+@login_required
 def search(request):
     """New Search API using ElasticSearch as backend."""
     if not settings.ELASTIC:
@@ -411,13 +500,8 @@ def search(request):
 
     r = settings.ELASTIC.search(
         index=settings.ELASTIC_INDEX + "-*",
-        body={
-            "query": {
-                "query_string": {
-                    "query": '"%s"*' % value,
-                },
-            },
-        }
+        body=create_tlp_query(request.user, {"query_string": {"query": "*%s*" % value}})
+
     )
 
     analyses = []
@@ -430,7 +514,7 @@ def search(request):
         analyses.append({
             "task_id": hit["_source"]["report_id"],
             "matches": matches[:16],
-            "total": max(len(matches)-16, 0),
+            "total": max(len(matches) - 16, 0),
         })
 
     if request.POST.get("raw"):
@@ -445,7 +529,9 @@ def search(request):
         "error": None,
     })
 
+
 @require_safe
+@login_required
 def remove(request, task_id):
     """Remove an analysis.
     @todo: remove folder from storage.
@@ -511,7 +597,9 @@ def remove(request, task_id):
         "message": message,
     })
 
+
 @require_safe
+@login_required
 def pcapstream(request, task_id, conntuple):
     """Get packets from the task PCAP related to a certain connection.
     This is possible because we sort the PCAP during processing and remember offsets for each stream.
@@ -561,6 +649,8 @@ def pcapstream(request, task_id, conntuple):
     # TODO: starting from django 1.7 we should use JsonResponse.
     return HttpResponse(json.dumps(packets), content_type="application/json")
 
+
+@login_required
 def export_analysis(request, task_id):
     if request.method == "POST":
         return export(request, task_id)
@@ -598,6 +688,7 @@ def export_analysis(request, task_id):
         "files": files,
     })
 
+
 def json_default(obj):
     if isinstance(obj, datetime.datetime):
         if obj.utcoffset() is not None:
@@ -605,6 +696,8 @@ def json_default(obj):
         return calendar.timegm(obj.timetuple()) + obj.microsecond / 1000000.0
     raise TypeError("%r is not JSON serializable" % obj)
 
+
+@login_required
 def export(request, task_id):
     taken_dirs = request.POST.getlist("dirs")
     taken_files = request.POST.getlist("files")
@@ -655,6 +748,8 @@ def export(request, task_id):
     response["Content-Disposition"] = "attachment; filename=%s.zip" % task_id
     return response
 
+
+@login_required
 def import_analysis(request):
     if request.method == "GET":
         return render(request, "analysis/import.html")
@@ -721,7 +816,8 @@ def import_analysis(request):
                                       custom=info.get("custom"),
                                       memory=False,
                                       enforce_timeout=False,
-                                      tags=info.get("tags"))
+                                      tags=info.get("tags"),
+                                      owner=request.user.username if request.user.is_authenticated else "")
                 if task_id:
                     task_ids.append(task_id)
 
@@ -741,7 +837,8 @@ def import_analysis(request):
                                  custom=info.get("custom"),
                                  memory=False,
                                  enforce_timeout=False,
-                                 tags=info.get("tags"))
+                                 tags=info.get("tags"),
+                                 owner=request.user.username if request.user.is_authenticated else "")
             if task_id:
                 task_ids.append(task_id)
 
@@ -770,6 +867,8 @@ def import_analysis(request):
             "baseurl": request.build_absolute_uri("/")[:-1],
         })
 
+
+@login_required
 def reboot_analysis(request, task_id):
     task_id = Database().add_reboot(task_id=task_id)
 

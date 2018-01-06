@@ -13,9 +13,11 @@
             <th>Cuckoo release</th>
             <td>{{analysis.info.version}}</td>
         </tr>
+        {% if user.username == analysis.info.owner %}
         <tr>
             <th></th>
             <td><a href="{% url "analysis.views.remove" analysis.info.id %}" class="btn btn-primary btn-small">Delete</a></td>
         </tr>
+        {% endif %}
     </table>
 </div>

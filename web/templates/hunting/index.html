@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% block content %}
+<form role="form" action="submit/" method="post" enctype="multipart/form-data">{% csrf_token %}
+    <ul class="nav nav-tabs">
+        <li class="active"><a href="#suricata" data-toggle="tab">Suricata</a></li>
+        <li><a href="#yara" data-toggle="tab">YARA</a></li>
+    </ul>
+
+    <div class="tab-content">
+        <div class="tab-pane fade in active" id="suricata">
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Suricata</h3>
+                </div>
+                <div>
+                    <h4>Select Suricata rules file to submit</h4>
+                    <input type="file" name="suricataRulesFile">
+                    <h4>Recent Suricata Hunts</h4>
+                    <ul>
+                        {% for hunt in suricata_hunts %}
+
+                        <li><a href="{% url "hunting.views.report" hunt.uuid%}">{{hunt.timestamp}}</a> - {{hunt.uuid}}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="tab-pane fade in" id="yara">
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <h3 class="panel-title">YARA</h3>
+                </div>
+                <h4>Select Yara rules file to submit</h4>
+                <input type="file" name="yaraRulesFile">
+                  <h4>Recent Yara Hunts</h4>
+                    <ul>
+                        {% for hunt in yara_hunts %}
+                        <li><a href="{% url "hunting.views.report" hunt.uuid%}">{{hunt.timestamp}}</a> - {{hunt.uuid}}</li>
+                        {% endfor %}
+                    </ul>
+            </div>
+        </div>
+    </div>
+    <div Class="checkbox">
+        <table>
+            <tr>
+                <td rowspan="3">Traffic Light</td>
+                <td><input type="radio" name="tlp" value="green">Green - Anyone with an Account</input></td>
+            </tr>
+            <tr>
+                <td><input type="radio" name="tlp" value="amber" checked="checked">Amber -
+                    Only in your groups</input></td>
+            </tr>
+            <tr>
+                <td><input type="radio" name="tlp" value="red">Red - Private Submission</input>
+                </td>
+            </tr>
+        </table>
+        <label>
+
+        </label>
+    </div>
+    <button type="submit" class="btn btn-primary btn-lg">Hunt</button>
+</form>
+{% endblock %}

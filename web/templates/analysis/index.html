@@ -4,6 +4,8 @@
 <ul class="nav nav-tabs">
     <li class="active"><a href="#files" data-toggle="tab">Files</a></li>
     <li><a href="#urls" data-toggle="tab">URLs</a></li>
+    <li><a href="#yara_hunts" data-toggle="tab">YARA Hunts</a></li>
+    <li><a href="#suri_hunts" data-toggle="tab">Suricata Hunts</a></li>
 </ul>
 
 <div class="tab-content">
@@ -16,34 +18,36 @@
             <table class="table table-striped" style="table-layout: fixed;">
                 <thead>
                 <tr>
-                    <th>Timestamp</th>
-                    <th>Filename</th>
-                    <th>MD5</th>
-                    <th>Status</th>
+                    <th width="150">Timestamp</th>
+                    <th width="200">Filename</th>
+                    <th width="150">MD5</th>
+                    <th width="100">Status</th>
+                    <th>Command Lines</th>
+                    <th>Stage 2+ URLs</th>
                 </tr>
                 </thead>
                 <tbody>
                 {% for analysis in files %}
                     <tr>
-                        <td>
+                        <td width="150">
                         {% if analysis.status == "reported" %}
                             {{analysis.completed_on}}
                         {% else %}
                             <span class="muted">{{analysis.added_on}} (added on)</span>
                         {% endif %}
                         </td>
-                        <td>
+                        <td width="200">
                             {{analysis.filename}}
                         </td>
-                        <td style="word-wrap: break-word;">
+                        <td width="150" style="word-wrap: break-word;">
                             {% if analysis.status == "reported" or analysis.status == "failed_analysis" %}
                                 <a href="{% url "analysis.views.report" analysis.id %}"><span class="mono">{{analysis.sample.md5}}</span></a>
                             {% else %}
                                 <span class="mono">{{analysis.sample.md5}}</span>
                             {% endif %}
                         </td>
-                        <td>
-                            {% if analysis.status == "pending" %}
+                        <td width="100">
+                            <a href="{% url "analysis.views.tldr" analysis.id %}" target="_blank">{% if analysis.status == "pending" %}
                                 <span class="text-muted">pending</span>
                             {% elif analysis.status == "running" %}
                                 <span class="text-warning">running</span>
@@ -60,6 +64,23 @@
                             {% else %}
                                 <span class="text-danger">{{analysis.status}}</span>
                             {% endif %}
+                           </a>
+                        </td>
+                        <td>
+                            <ul>{% for process in analysis.processes %}
+                            <li class="mono">{{process.command_line|truncatechars:250}}</li>
+                                {% endfor %}</ul>
+
+                        </td>
+                        <td>
+                            {% for myurl in analysis.https %}
+                            <span class="mono"><a target="_blank" href="{% url "analysis.views.moloch" src_ip=myurl.src src_port=myurl.sport dst_ip=myurl.dst dst_port=myurl.dport %}">{{myurl.protocol}}://{{myurl.host}}/{{myurl.uri}}</a></span><br/>
+                            <span class="mono">{{myurl.request}}</span><br/>
+                            {% endfor %}
+                            {% for myurl in analysis.http %}
+                            <span class="mono"><a target="_blank" href="{% url "analysis.views.moloch" src_ip=myurl.src src_port=myurl.sport dst_ip=myurl.dst dst_port=myurl.dport %}">{{myurl.protocol}}://{{myurl.host}}/{{myurl.uri}}</a></span><br/>
+                            <span class="mono">{{myurl.request}}</span><br/>
+                            {% endfor %}
                         </td>
                     </tr>
                 {% endfor %}
@@ -114,6 +135,7 @@
                                 <span class="text-danger">{{analysis.status}}</span>
                             {% endif %}
                         </td>
+
                     </tr>
                 {% endfor %}
                 </tbody>
@@ -123,5 +145,108 @@
             {% endif %}
         </div>
     </div>
+    <div class="tab-pane fade" id="yara_hunts">
+        <div class="panel panel-primary">
+            <div class="panel-heading">
+                <h3 class="panel-title">Recent YARA Hunts</h3>
+            </div>
+            {% if yara_hunts %}
+            <table class="table table-striped" style="table-layout: fixed;">
+                <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Rule Name</th>
+                    <th>Dropped Files</th>
+                    <th>Meta</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for yhunt in yara_hunts %}
+                    <tr>
+                        <td><a href="{% url "analysis.views.report" yhunt.analysis_id%}">{{yhunt.run_date}}</a> </td>
+                        <td><a href="/hunting/yara_file/{{yhunt.uuid}}">{{ yhunt.rule }}</a></td>
+                        <td>
+                            {% for file in yhunt.file_dropped %}
+                            <ul>
+                                <li>File Name: {{file.file_path}}</li>
+                                <li>File MD5: <a href="{% url "analysis.views.file" "dropped" file.object_id%}"><span class="mono">{{file.file_md5}}</span></a></li>
+                                <li>File SHA1: {{file.file_sha1}}</li>
+                                <li>File SHA256: {{file.file_sha256}}</li>
+                                <li>
+                                    <ul>
+                                        {% for commandline in file.command_line %}
+                                        <li>Command Line: {{commandline.command_line}}</li>
+                                        <li>Parent PID: {{commandline.parent}}</li>
+                                        <li>Parent Command Line: {{commandline.parent_command_line}}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </li>
+                            </ul>
+                            {% endfor %}
+
+                        </td>
+                        <td>
+                            <ul>
+                                <li>Description: {{yhunt.meta.description}}</li>
+                                <li>Author: {{yhunt.meta.author}}</li>
+                                <li>Filetype: {{yhunt.meta.filetype}}</li>
+                                <li>MD5: {{yhunt.meta.md5}}</li>
+                                <li>Reference: {{yhunt.meta.reference}}</li>
+
+                            </ul>
+
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="panel-body">No Hunts run yet.</div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="tab-pane fade" id="suri_hunts">
+        <div class="panel panel-primary">
+            <div class="panel-heading">
+                <h3 class="panel-title">Recent Suricata Hunts</h3>
+            </div>
+            {% if suri_hunts %}
+            <table class="table table-striped" style="table-layout: fixed;">
+                <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>UUID</th>
+                    <th>Signature</th>
+                    <th>IP Details</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for shunt in suri_hunts %}
+                <tr>
+                    <td><a href="{% url "analysis.views.report" shunt.analysis_id%}">{{shunt.timestamp}}</a> </td>
+                    <td>{{shunt.uuid}}</td>
+                    <td><a href="/hunting/suri_file/{{shunt.uuid}}">{{ shunt.alert.signature}}</a></td>
+                    <td>
+                        <a href="{% url "hunting.views.pcap" shunt.analysis_id%}">PCAP</a>
+                        <ul>
+                            <li>Source IP: {{shunt.src_ip}}</li>
+                            <li>Source Port: {{shunt.src_port}}</li>
+                            <li>Proto: {{shunt.proto}}</li>
+                            <li>Dest IP: {{shunt.dest_ip}}</li>
+                            <li>Dest Port: {{shunt.dest_port}}</li>
+
+                        </ul>
+
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="panel-body">No Hunts run yet.</div>
+            {% endif %}
+        </div>
+    </div>
+
 </div>
 {% endblock %}

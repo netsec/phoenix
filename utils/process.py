@@ -151,6 +151,7 @@ def autoprocess(parallel=1):
     except:
         log.exception("Caught unknown exception")
     finally:
+        pool.close()
         pool.join()
 
 def main():

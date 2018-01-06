@@ -115,7 +115,8 @@ class MongoDB(Report):
             report["debug"]["cuckoo"] = list(report["debug"]["cuckoo"])
 
         # Store path of the analysis path.
-        report["info"]["analysis_path"] = self.analysis_path
+        if report.get("info"):
+            report["info"]["analysis_path"] = self.analysis_path
 
         # Store the sample in GridFS.
         if results.get("info", {}).get("category") == "file" and "target" in results:
@@ -249,6 +250,8 @@ class MongoDB(Report):
 
             report["procmon"] = procmon
 
+        # Store TLP object
+        report['info']['tlp'] = self.task['tlp']
         # Store the report and retrieve its object id.
         self.db.analysis.save(report)
         self.conn.close()

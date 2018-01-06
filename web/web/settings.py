@@ -60,7 +60,13 @@ init_routing()
 DEBUG = True
 
 # Database settings. We don't need it.
-DATABASES = {}
+# Database settings. We don't need it but Django auth yes.
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'cuckoo.sqlite',
+    }
+}
 
 SITE_ID = 1
 
@@ -142,6 +148,11 @@ TEMPLATES = [
         "DIRS": [
             "templates",
         ],
+        'OPTIONS': {
+            'context_processors': [
+                "django.contrib.auth.context_processors.auth",
+            ]
+        },
         "APP_DIRS": True,
     },
 ]
@@ -156,7 +167,7 @@ INSTALLED_APPS = (
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     # 'django.contrib.sites',
-    # 'django.contrib.messages',
+    'django.contrib.messages',
     'django.contrib.staticfiles',
     # Uncomment the next line to enable the admin:
     'django.contrib.admin',
@@ -165,7 +176,7 @@ INSTALLED_APPS = (
     'analysis',
     'compare',
 )
-
+LOGIN_URL = "/login"
 LOGIN_REDIRECT_URL = "/"
 
 # Fix to avoid migration warning in django 1.7 about test runner (1_6.W001).
@@ -214,6 +225,10 @@ LOGGING = {
     }
 }
 
+#TODO Use CWD or whatever
+SURICATA_PATH=''
+ANALYSES_PREFIX=''
+YARA_DOCKER_IMAGE= 'devyara'
 # Hack to import local settings.
 try:
     LOCAL_SETTINGS

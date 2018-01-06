@@ -20,6 +20,7 @@ try:
     from sqlalchemy import create_engine, Column, not_
     from sqlalchemy import Integer, String, Boolean, DateTime, Enum, func
     from sqlalchemy import ForeignKey, Text, Index, Table
+    from sqlalchemy import or_, and_
     from sqlalchemy.ext.declarative import declarative_base
     from sqlalchemy.exc import SQLAlchemyError, IntegrityError
     from sqlalchemy.orm import sessionmaker, relationship, joinedload
@@ -272,6 +273,7 @@ class Task(Base):
     owner = Column(String(64), nullable=True)
     machine = Column(String(255), nullable=True)
     package = Column(String(255), nullable=True)
+    tlp = Column(String(16), nullable=True)
     tags = relationship("Tag", secondary=tasks_tags, single_parent=True,
                         backref="task", lazy="subquery")
     _options = Column("options", String(255), nullable=True)
@@ -892,7 +894,7 @@ class Database(object):
     @classlock
     def add(self, obj, timeout=0, package="", options="", priority=1,
             custom="", owner="", machine="", platform="", tags=None,
-            memory=False, enforce_timeout=False, clock=None, category=None):
+            memory=False, enforce_timeout=False, clock=None, category=None, tlp='green'):
         """Add a task to database.
         @param obj: object to add (File or URL).
         @param timeout: selected timeout.
@@ -960,7 +962,7 @@ class Database(object):
         task.platform = platform
         task.memory = memory
         task.enforce_timeout = enforce_timeout
-
+        task.tlp = tlp
         # Deal with tags format (i.e., foo,bar,baz)
         if tags:
             for tag in tags.split(","):
@@ -983,7 +985,7 @@ class Database(object):
             session.commit()
             task_id = task.id
         except SQLAlchemyError as e:
-            log.debug("Database error adding task: {0}".format(e))
+            log.error("Database error adding task: {0}".format(e))
             session.rollback()
             return None
         finally:
@@ -993,7 +995,7 @@ class Database(object):
 
     def add_path(self, file_path, timeout=0, package="", options="",
                  priority=1, custom="", owner="", machine="", platform="",
-                 tags=None, memory=False, enforce_timeout=False, clock=None):
+                 tags=None, memory=False, enforce_timeout=False, clock=None, tlp=None):
         """Add a task to database from file path.
         @param file_path: sample path.
         @param timeout: selected timeout.
@@ -1021,11 +1023,11 @@ class Database(object):
 
         return self.add(File(file_path), timeout, package, options, priority,
                         custom, owner, machine, platform, tags, memory,
-                        enforce_timeout, clock, "file")
+                        enforce_timeout, clock, "file", tlp)
 
     def add_url(self, url, timeout=0, package="", options="", priority=1,
                 custom="", owner="", machine="", platform="", tags=None,
-                memory=False, enforce_timeout=False, clock=None):
+                memory=False, enforce_timeout=False, clock=None, tlp=None):
         """Add a task to database from url.
         @param url: url.
         @param timeout: selected timeout.
@@ -1050,7 +1052,7 @@ class Database(object):
 
         return self.add(URL(url), timeout, package, options, priority,
                         custom, owner, machine, platform, tags, memory,
-                        enforce_timeout, clock, "url")
+                        enforce_timeout, clock, "url", tlp)
 
     def add_baseline(self, timeout=0, owner="", machine="", memory=False):
         """Add a baseline task to database.
@@ -1160,7 +1162,7 @@ class Database(object):
 
     def list_tasks(self, limit=None, details=True, category=None, owner=None,
                    offset=None, status=None, sample_id=None, not_status=None,
-                   completed_after=None, order_by=None):
+                   completed_after=None, order_by=None, tlpuser=None, tlpamberusers=None):
         """Retrieve list of task.
         @param limit: specify a limit of entries.
         @param details: if details about must be included
@@ -1192,6 +1194,20 @@ class Database(object):
                 search = search.filter_by(sample_id=sample_id)
             if completed_after:
                 search = search.filter(Task.completed_on > completed_after)
+            if tlpuser:
+                search = search.filter(
+                    or_(
+                        Task.tlp == "green",
+                        and_(
+                            Task.tlp == "amber",
+                            Task.owner.in_(tlpamberusers)
+                        ),
+                        and_(
+                            Task.tlp == "red",
+                            Task.owner == tlpuser
+                        )
+                    )
+                )
 
             if order_by is not None:
                 search = search.order_by(order_by)

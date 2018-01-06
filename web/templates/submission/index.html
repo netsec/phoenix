@@ -187,6 +187,26 @@ $(document).ready( function() {
                                     <input type="checkbox" name="services" />Enable Services <span class="text-muted"><small>(enable simulated environment specified in the auxiliary configuration)</small></span>
                                 </label>
                             </div>
+                            <div Class="checkbox">
+                                <table>
+                                    <tr>
+                                        <td rowspan="3">Traffic Light</td>
+                                        <td><input type="radio" name="tlp" value="green">Green - Anyone with an
+                                            Account</input></td>
+                                    </tr>
+                                    <tr>
+                                        <td><input type="radio" name="tlp" value="amber" checked="checked">Amber -
+                                            Only in your groups</input></td>
+                                    </tr>
+                                    <tr>
+                                        <td><input type="radio" name="tlp" value="red">Red - Private Submission</input>
+                                        </td>
+                                    </tr>
+                                </table>
+                                <label>
+
+                                </label>
+                            </div>
                             <div class="form-group">
                                 <label for="form_tags">Tags</label>
                                 <input type="text" class="form-control" id="form_tags" name="tags" />

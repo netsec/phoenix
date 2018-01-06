@@ -6,6 +6,7 @@
 import sys
 
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.views.decorators.http import require_safe
 
@@ -16,6 +17,7 @@ import lib.cuckoo.common.compare as compare
 results_db = settings.MONGO
 
 @require_safe
+@login_required
 def left(request, left_id):
     left = results_db.analysis.find_one({"info.id": int(left_id)}, {"target": 1, "info": 1})
     if not left:
@@ -52,6 +54,7 @@ def left(request, left_id):
     })
 
 @require_safe
+@login_required
 def hash(request, left_id, right_hash):
     left = results_db.analysis.find_one({"info.id": int(left_id)}, {"target": 1, "info": 1})
     if not left:
@@ -90,6 +93,7 @@ def hash(request, left_id, right_hash):
     })
 
 @require_safe
+@login_required
 def both(request, left_id, right_id):
     left = results_db.analysis.find_one({"info.id": int(left_id)}, {"target": 1, "info": 1})
     right = results_db.analysis.find_one({"info.id": int(right_id)}, {"target": 1, "info": 1})

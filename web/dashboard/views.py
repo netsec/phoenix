@@ -15,8 +15,10 @@ sys.path.insert(0, settings.CUCKOO_PATH)
 from lib.cuckoo.core.database import Database, TASK_PENDING, TASK_RUNNING
 from lib.cuckoo.core.database import TASK_COMPLETED, TASK_RECOVERED, TASK_REPORTED
 from lib.cuckoo.core.database import TASK_FAILED_ANALYSIS, TASK_FAILED_PROCESSING, TASK_FAILED_REPORTING
+from django.contrib.auth.decorators import login_required
 
 @require_safe
+@login_required
 def index(request):
     db = Database()
 

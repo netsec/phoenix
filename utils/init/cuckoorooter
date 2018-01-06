@@ -1,0 +1,67 @@
+#!/bin/bash
+#
+#       /etc/rc.d/init.d/<servicename>
+#
+#       <description of the *service*>
+#       <any general comments about this init script>
+#
+# <tags -- see below for tag definitions.  *Every line* from the top
+#  of the file to the end of the tags section must begin with a #
+#  character.  After the tags section, there should be a blank line.
+#  This keeps normal comments in the rest of the file from being
+#  mistaken for tags, should they happen to fit the pattern.>
+
+# Source function library.
+. /etc/init.d/functions
+PROGNAME="rooter.py"
+NAME="cuckoorooter"
+#DROPUSER="cuckoo"
+MYHOMEDIR="/ssd/cuckoo/cuckoo/utils"
+LOGFILE="/var/log/cuckoo/rooter.log"
+OPTIONS="--service /sbin/service"
+
+start() {
+        echo -n "Starting $PROGNAME: "
+	cd "$MYHOMEDIR" ; /usr/local/bin/python2.7 $PROGNAME $OPTIONS  >> "$LOGFILE" 2>&1 &
+	sleep 10 ; /root/.scripts/fix_openvpn.sh 2>/dev/null
+	return $?
+}
+
+stop() {
+        echo -n "Shutting down $PROGNAME: "
+	if [ -n "$DROPUSER" ]; then
+		ps -ef|grep $PROGNAME|grep $DROPUSER|grep -v grep|awk '{print $2}'|while read line; do kill $line;done
+	else
+		ps -ef|grep $PROGNAME|grep -v grep|awk '{print $2}'|while read line; do kill $line;done
+	fi
+        return $?
+}
+status() {
+	C=`ps -ef|grep $PROGNAME|grep -v grep`
+	if [ -n "$C" ]; then
+		echo "$NAME is running"
+	else
+		echo "$NAME is *NOT* running"
+	fi
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+	status
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    *)
+        echo "Usage: <servicename> {start|stop|status|reload|restart[|probe]"
+        exit 1
+        ;;
+esac
+exit $?

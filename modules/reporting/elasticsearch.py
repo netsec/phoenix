@@ -167,6 +167,8 @@ class ElasticSearch(Report):
                 base_document = self.get_base_document()
                 call_document = {
                     "pid": process["pid"],
+                    "tlp": self.task["tlp"],
+                    "owner": self.task["owner"]
                 }
                 call_document.update(self.process_call(call))
                 call_document.update(base_document)
@@ -200,6 +202,8 @@ class ElasticSearch(Report):
         self.do_index({
             "cuckoo_node": self.options.get("cuckoo_node"), 
             "target": results.get("target"),
+            "tlp": self.task["tlp"],
+            "owner": self.task["owner"],
             "summary": results.get("behavior", {}).get("summary"),
             "virustotal": results.get("virustotal"),
             "irma": results.get("irma"),

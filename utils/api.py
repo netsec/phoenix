@@ -61,11 +61,14 @@ def tasks_create_file():
     options = request.form.get("options", "")
     machine = request.form.get("machine", "")
     platform = request.form.get("platform", "")
+    tlp = request.form.get("tlp", "")
     tags = request.form.get("tags", None)
     custom = request.form.get("custom", "")
     owner = request.form.get("owner", "")
     memory = request.form.get("memory", False)
     clock = request.form.get("clock", None)
+    if not tlp:
+        tlp = "green"
 
     if memory:
         memory = True
@@ -85,6 +88,7 @@ def tasks_create_file():
         machine=machine,
         platform=platform,
         tags=tags,
+        tlp=tlp,
         custom=custom,
         owner=owner,
         memory=memory,
