@@ -1,0 +1,4 @@
+#CUCKOOCRONS
+0 * * * * CUCKOODIR/utils/crontab/cuckoo/clean_mem.sh
+* * * * * python2.7 CUCKOODIR/utils/update_moloch_perms.py >> CUCKOODIR/log/moloch_perms.log 2>&1
+#ENDCUCKOOCRONS

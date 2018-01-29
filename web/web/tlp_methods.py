@@ -12,16 +12,26 @@ def get_tlp_users(user):
 
 
 def get_analyses_numbers_matching_tlp(username, usersInGroup):
+    query_object = get_mongo_tlp_query_object(username, usersInGroup)
+    analyses = results_db.analysis.find(query_object, {"info.id": "1"})
+    analyses_numbers = [str(result["info"]["id"]) for result in analyses]
+    #print analyses_numbers
+    #print query_object
+    return analyses_numbers
+
+
+def get_mongo_tlp_query_object(username, usersInGroup):
     query_object = {'$or': [{'$and': [{'info.tlp': 'red'}, {'info.owner': username}]},
                             {'$and': [{'info.tlp': 'amber'}, {'info.owner': {'$in': usersInGroup}}]},
                             {'info.tlp': 'green'}]}
-    analyses = results_db.analysis.find(query_object, {"info.id": "1"})
-    analyses_numbers = [str(result["info"]["id"]) for result in analyses]
-    return analyses_numbers
+    return query_object
 
 
 def create_tlp_query(user, search_filter):
     return {
+        "from": "0",
+        "size": "10000",
+        "sort":{"run_date":{"order":"desc"}},
         "query": {
             "bool": {
                 "must": [
@@ -36,13 +46,13 @@ def create_tlp_query(user, search_filter):
                             {"bool": {
                                 "must": [
                                     {"term": {"tlp": "amber"}},
-                                    {"terms": {"username": get_tlp_users(user)}}
+                                    {"terms": {"username.raw": get_tlp_users(user)}}
                                 ]
                             }},
                             {"bool": {
                                 "must": [
                                     {"term": {"tlp": "red"}},
-                                    {"term": {"username": user.username}}
+                                    {"term": {"username.raw": user.username}}
                                 ]
                             }}
                         ]

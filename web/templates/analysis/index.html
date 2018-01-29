@@ -1,6 +1,14 @@
 {% extends "base.html" %}
 {% load staticfiles %}
 {% block content %}
+<script type="text/javascript">
+    $(document).ready( function () {
+    $('#file_table').DataTable();
+    $('#url_table').DataTable();
+    $('#yara_table').DataTable();
+    $('#suricata_table').DataTable();
+} );
+</script>
 <ul class="nav nav-tabs">
     <li class="active"><a href="#files" data-toggle="tab">Files</a></li>
     <li><a href="#urls" data-toggle="tab">URLs</a></li>
@@ -15,7 +23,7 @@
                 <h3 class="panel-title">Recent Files</h3>
             </div>
             {% if files %}
-            <table class="table table-striped" style="table-layout: fixed;">
+            <table class="table table-striped" style="table-layout: fixed;" id="file_table">
                 <thead>
                 <tr>
                     <th width="150">Timestamp</th>
@@ -31,9 +39,9 @@
                     <tr>
                         <td width="150">
                         {% if analysis.status == "reported" %}
-                            {{analysis.completed_on}}
+                           <span class="sort_field">{{ analysis.completed_on|date:"Y/m/d H:i" }}</span>{{analysis.completed_on}}
                         {% else %}
-                            <span class="muted">{{analysis.added_on}} (added on)</span>
+                            <span class="sort_field">{{ analysis.added_on|date:"Y/m/d H:i" }}</span><span class="muted">{{analysis.added_on}} (added on)</span>
                         {% endif %}
                         </td>
                         <td width="200">
@@ -74,11 +82,11 @@
                         </td>
                         <td>
                             {% for myurl in analysis.https %}
-                            <span class="mono"><a target="_blank" href="{% url "analysis.views.moloch" src_ip=myurl.src src_port=myurl.sport dst_ip=myurl.dst dst_port=myurl.dport %}">{{myurl.protocol}}://{{myurl.host}}/{{myurl.uri}}</a></span><br/>
+                            <span class="mono"><a target="_blank" href="{% url "analysis.views.moloch" src_ip=myurl.src src_port=myurl.sport dst_ip=myurl.dst dst_port=myurl.dport %}">{{myurl.full_url}} ({{myurl.mycat}})</a></span><br/>
                             <span class="mono">{{myurl.request}}</span><br/>
                             {% endfor %}
                             {% for myurl in analysis.http %}
-                            <span class="mono"><a target="_blank" href="{% url "analysis.views.moloch" src_ip=myurl.src src_port=myurl.sport dst_ip=myurl.dst dst_port=myurl.dport %}">{{myurl.protocol}}://{{myurl.host}}/{{myurl.uri}}</a></span><br/>
+                            <span class="mono"><a target="_blank" href="{% url "analysis.views.moloch" src_ip=myurl.src src_port=myurl.sport dst_ip=myurl.dst dst_port=myurl.dport %}">{{myurl.full_url}} ({{myurl.mycat}})</a></span><br/>
                             <span class="mono">{{myurl.request}}</span><br/>
                             {% endfor %}
                         </td>
@@ -98,7 +106,7 @@
                 <h3 class="panel-title">Recent URLs</h3>
             </div>
             {% if urls %}
-            <table class="table table-striped" style="table-layout: fixed;">
+            <table class="table table-striped" style="table-layout: fixed;" id="url_table">
                 <thead>
                 <tr>
                     <th>Timestamp</th>
@@ -111,9 +119,9 @@
                     <tr>
                         <td>
                         {% if analysis.status == "reported" %}
-                            {{analysis.completed_on}}
+                            <span class="sort_field">{{ analysis.completed_on|date:"Y/m/d H:i" }}</span>{{analysis.completed_on}}
                         {% else %}
-                            <span class="muted">{{analysis.added_on}} (added on)</span>
+                            <span class="sort_field">{{ analysis.added_on|date:"Y/m/d H:i" }}</span><span class="muted">{{analysis.added_on}} (added on)</span>
                         {% endif %}
                         </td>
                         <td style="word-wrap: break-word;">
@@ -151,7 +159,7 @@
                 <h3 class="panel-title">Recent YARA Hunts</h3>
             </div>
             {% if yara_hunts %}
-            <table class="table table-striped" style="table-layout: fixed;">
+            <table class="table table-striped" style="table-layout: fixed;" id="yara_table">
                 <thead>
                 <tr>
                     <th>Timestamp</th>
@@ -175,9 +183,9 @@
                                 <li>
                                     <ul>
                                         {% for commandline in file.command_line %}
-                                        <li>Command Line: {{commandline.command_line}}</li>
+                                        <li>Command Line: {{commandline.command_line|truncatechars:250}}</li>
                                         <li>Parent PID: {{commandline.parent}}</li>
-                                        <li>Parent Command Line: {{commandline.parent_command_line}}</li>
+                                        <li>Parent Command Line: {{commandline.parent_command_line|truncatechars:250}}</li>
                                         {% endfor %}
                                     </ul>
                                 </li>
@@ -211,7 +219,7 @@
                 <h3 class="panel-title">Recent Suricata Hunts</h3>
             </div>
             {% if suri_hunts %}
-            <table class="table table-striped" style="table-layout: fixed;">
+            <table class="table table-striped" style="table-layout: fixed;" id="suricata_table">
                 <thead>
                 <tr>
                     <th>Timestamp</th>

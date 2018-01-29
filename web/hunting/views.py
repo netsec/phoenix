@@ -25,6 +25,7 @@ from web.tlp_methods import get_tlp_users, create_tlp_query, get_analyses_number
 sys.path.insert(0, settings.CUCKOO_PATH)
 # analyses_prefix =
 analyses_prefix = settings.ANALYSES_PREFIX
+analyses_storage = os.path.abspath(os.path.join(analyses_prefix, os.pardir))
 # source_for_suri_yaml =
 source_for_suri_yaml = settings.SURICATA_PATH
 eshost = "10.200.10.20:9200"
@@ -50,7 +51,7 @@ def timing(f):
 @login_required
 def index(request):
     if request.user.is_authenticated():
-        query_template = '{"from": 0, "size": 10, "query":{"bool":{"must":[{"term":{"username":"'+request.user.username + '"}},'
+        query_template = '{"from": 0, "size": 10, "query":{"bool":{"must":[{"term":{"username.raw":"'+request.user.username + '"}},'
         yara_query = query_template + '{"term":{"_type":"yara"}}]}}}'
         suri_query = query_template + '{"term":{"_type":"suricata"}}]}}}'
         yara_hunts = es.search(index="hunt-*", body=yara_query)
@@ -92,8 +93,8 @@ def submit(request):
         analyses_numbers = get_analyses_numbers_matching_tlp(username, usersInGroup)
 
         # analyses = results_db.analysis.find({}, {"info.id": "1"})
-        hunting_prefix = analyses_prefix + ".hunting/"
-        hunting_uuid = hunting_prefix + strUuid
+        hunting_prefix = os.path.join(analyses_prefix, ".hunting/")
+        hunting_uuid = os.path.join(hunting_prefix, strUuid)
         os.makedirs(hunting_uuid)
 
         #       Workaround for TLP
@@ -119,15 +120,14 @@ def kick_off_suricata(analyses_numbers, client, hunting_uuid, strUuid, suriRuleF
             for chunk in suriRuleFile.chunks():
                 destination.write(chunk)
         shutil.copy(source_for_suri_yaml, slice_dir)
-        with open(slice_dir + "/infiles", 'wb+') as infiles:
+        with open(os.path.join(slice_dir, "/infiles"), 'wb+') as infiles:
             start_index = i * jobSplitLength
             end_index = start_index + jobSplitLength - 1 if len(
                 analyses_numbers) > start_index + jobSplitLength else len(analyses_numbers) - 1
             for number in analyses_numbers.__getslice__(start_index, end_index):
                 infiles.write('/input/' + str(number) + '/dump.pcap\n')
-        container = client.containers.run('7980d1615685',
-                                          '/input/.hunting/.scripts/suri.py ' + strUuid + ' ' + username + ' ' + tlp + ' ' + str(
-                                              i),
+        container = client.containers.run(settings.SURICATA_DOCKER_IMAGE,
+                                          "{0} {1} {2} {3}".format(strUuid, username, tlp, i),
                                           detach=True,
                                           volumes={analyses_prefix: {'bind': '/input', 'mode': 'rw'}},
                                           mem_limit='16g',
@@ -137,44 +137,60 @@ def kick_off_suricata(analyses_numbers, client, hunting_uuid, strUuid, suriRuleF
 
 
 def kick_off_yara(analyses_numbers, client, hunting_uuid, strUuid, yaraRuleFile, tlp, username):
-    yara_hunt_folder = os.path.join(hunting_uuid, "yara")
-    yara_malware_folder = os.path.join(yara_hunt_folder, "malware")
+    number_set = set(analyses_numbers)
+    yara_malware_folder, yara_root_folder, yara_rule_file_path, yara_rules_folder, yara_target_files = get_yara_paths(
+        hunting_uuid)
+    os.makedirs(yara_rules_folder)
     os.makedirs(yara_malware_folder)
     # write yara rule file to new yara hunt dir
-    volumes = {yara_hunt_folder: {'bind': '/rules', 'mode': 'rw'}}
-    yara_rule_file_path = os.path.join(yara_hunt_folder, "yararules.yar")
+    volumes = {yara_root_folder: {'bind': '/yara', 'mode': 'rw'}, analyses_storage:{ 'bind': analyses_storage, 'mode': 'ro'}}
+
     with open(yara_rule_file_path, 'wb+') as yara_destination:
         for chunk in yaraRuleFile.chunks():
             yara_destination.write(chunk)
 
-    # create symlinks for all TLP approved files
-    for number in analyses_numbers:
-        analysis_folder = os.path.join(analyses_prefix, number)
-        yara_malware_instance_folder = os.path.join("/input", number)
-        # os.makedirs(yara_malware_instance_folder)
+    targets = []
 
+    # create symlinks for all TLP approved files
+    for number in number_set:
+        analysis_folder = os.path.join(analyses_prefix, number)
+        yara_malware_instance_folder = os.path.join(analyses_prefix, number)
+        #yara_malware_instance_folder = os.path.join(yara_malware_folder, number)
+        #os.makedirs(yara_malware_instance_folder)
         analysis_memory_path = os.path.join(analysis_folder, "memory")
         if os.path.exists(analysis_memory_path):
             print analysis_memory_path
-            volumes[analysis_memory_path] = {'bind': os.path.join(yara_malware_instance_folder, "memory"), 'mode': 'ro'}
-
-            # os.symlink(analysis_memory_path, os.path.join(yara_malware_instance_folder, "memory"))
+            #volumes[analysis_memory_path] = {'bind': os.path.join(yara_malware_instance_folder, "memory"), 'mode': 'ro'}
+            targets.append(os.path.join(yara_malware_instance_folder, "memory"))
+            #os.symlink(analysis_memory_path, os.path.join(yara_malware_instance_folder, "memory"))
 
         analysis_buffer_path = os.path.join(analysis_folder, "buffer")
         if os.path.exists(analysis_buffer_path):
             print analysis_buffer_path
-            volumes[analysis_buffer_path] = {'bind': os.path.join(yara_malware_instance_folder, "buffer"), 'mode': 'ro'}
+            targets.append(os.path.join(yara_malware_instance_folder, "buffer"))
+            #volumes[analysis_buffer_path] = {'bind': os.path.join(yara_malware_instance_folder, "buffer"), 'mode': 'ro'}
+            #os.symlink(analysis_buffer_path, os.path.join(yara_malware_instance_folder, "buffer"))
 
         analysis_files_path = os.path.join(analysis_folder, "files")
         if os.path.exists(analysis_files_path):
             print analysis_files_path
-            volumes[analysis_files_path] = {'bind': os.path.join(yara_malware_instance_folder, "files"), 'mode': 'ro'}
+            #volumes[analysis_files_path] = {'bind': os.path.join(yara_malware_instance_folder, "files"), 'mode': 'ro'}
+            targets.append(os.path.join(yara_malware_instance_folder, "files"))
+            #os.symlink(analysis_files_path, os.path.join(yara_malware_instance_folder, "files"))
 
-            # os.symlink(os.path.join(analysis_folder, "memory"), os.path.combine(yara_hunt_folder, number, "memory"))
+        binary_file_path = os.path.join(analysis_folder, "binary")
+        if os.path.exists(binary_file_path):
+            print binary_file_path
+            # volumes[analysis_files_path] = {'bind': os.path.join(yara_malware_instance_folder, "files"), 'mode': 'ro'}
+            targets.append(os.path.join(yara_malware_instance_folder, "binary"))
+            #os.symlink(analysis_memory_path, os.path.join(yara_malware_instance_folder, "binary"))
+    with open(os.path.join(yara_root_folder, "targets"),'w+') as target_file:
+        target_file.writelines([line + "\n" for line in targets])
+
     print volumes
     yara_container = client.containers.run(settings.YARA_DOCKER_IMAGE,
-                                           command="{0} {1} {2} {3} {4}".format("-y /rules/yararules.yar",
-                                                                                "-s /input/",
+                                           command="{0} {1} {2} {3} {4}".format("-y {0}".format(yara_rule_file_path),
+                                                                                "-s {0}".format(yara_target_files),
                                                                                 "-o {0}".format(username),
                                                                                 "-t {0}".format(tlp),
                                                                                 "-u {0}".format(strUuid)),
@@ -184,21 +200,30 @@ def kick_off_yara(analyses_numbers, client, hunting_uuid, strUuid, yaraRuleFile,
                                            detach=True)
 
 
+def get_yara_paths(hunting_uuid):
+    yara_root_folder = os.path.join(hunting_uuid, "yara")
+    yara_target_files = os.path.join(analyses_prefix, hunting_uuid, "yara/targets")
+    yara_rules_folder = os.path.join(yara_root_folder, "rules")
+    yara_malware_folder = os.path.join(yara_root_folder, "malware")
+    yara_rule_file_path = os.path.join(yara_rules_folder, "yararules.yar")
+    return yara_malware_folder, yara_root_folder, yara_rule_file_path, yara_rules_folder, yara_target_files
+
+
 @login_required
 def yara_file(request, hunt_uuid):
     hunting_prefix = analyses_prefix + ".hunting/"
     hunting_uuid = hunting_prefix + hunt_uuid
-    yara_file = os.path.join(hunting_uuid, "yara", "yararules.yar")
-    with open(yara_file, 'rb') as f:
-        response = HttpResponse(f, mimetypes.guess_type(yara_file)[0])
+    yara_malware_folder, yara_root_folder, yara_rule_file_path, yara_rules_folder, yara_target_files = get_yara_paths(hunting_uuid)
+    with open(yara_rule_file_path, 'rb') as f:
+        response = HttpResponse(f, mimetypes.guess_type(yara_rule_file_path)[0])
         response['Content-Disposition'] = 'attachment; filename="yararules.yar"'
         return response
 
 
 @login_required
 def suri_file(request, hunt_uuid):
-    hunting_prefix = analyses_prefix + ".hunting/"
-    hunting_uuid = hunting_prefix + hunt_uuid
+    hunting_prefix = os.path.join(analyses_prefix , ".hunting")
+    hunting_uuid = os.path.join(hunting_prefix, hunt_uuid)
     suri_file = os.path.join(hunting_uuid, "0", "all.rules")
     with open(suri_file, 'rb') as f:
         response = HttpResponse(f, mimetypes.guess_type(suri_file)[0])

@@ -6,6 +6,7 @@ import os
 
 from elasticsearch import Elasticsearch
 from pymongo import MongoClient
+from django.conf import settings
 from web.tlp_methods import get_tlp_users,get_analyses_numbers_matching_tlp
 
 today = datetime.date.today()
@@ -16,7 +17,7 @@ httpMemList = []
 domainList = []
 ipList = []
 output = {"File": {}}
-myes = "bm-es0:9200"
+# myes = "bm-es0:9200"
 myid = 0
 
 
@@ -39,27 +40,27 @@ def memPrune(obj):
 
 
 def httpPrune(obj):
-    dmn = obj.split("http://")[1].split("/")[0]
+    dmn = obj.split("://")[1].split("/")[0]
     if dmn not in prefix:
         return True
 
 
 def molochEsQuery(query):
-    es = Elasticsearch(myes)
+    es = settings.ELASTIC
     res = es.search(index="sessions-*", body=query)
     return res
 
 
 def mongoQuery(mdbquery):
-    mdb = "10.200.10.21:27017"
-    client = MongoClient(mdb)
+    # mdb = "10.200.10.21:27017"
+    client = settings.MONGO
     db = client.cuckoo
     cursor = db.analysis.find(mdbquery)
     return cursor
 
 
 def EsInsert(index, dtype, myid, body):
-    es = Elasticsearch(myes)
+    es = settings.ELASTIC
     res = es.index(index=index, doc_type=dtype, body=body)
 
 

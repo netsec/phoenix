@@ -47,12 +47,13 @@ domains = set()
 for domain in open(os.path.join(CUCKOO_ROOT, "data", "whitelist", "domain.txt")):
     domains.add(domain.strip())
 
+
 def getMongoObj(taskid):
-	#TODO: Make Mongo host config-based
-    mdb = "10.200.10.21:27017"
-    client = MongoClient(mdb)
-    db = client.cuckoo
-    cursor = db.analysis.find({"info.id": taskid},{"behavior.processes": "1","network.http_ex": "1", "network.https_ex":"1"})
+    # TODO: Make Mongo host config-based
+    client = settings.MONGO
+    mongo_db = client.cuckoo
+    cursor = mongo_db.analysis.find({"info.id": taskid},
+                              {"behavior.processes": "1", "network.http_ex": "1", "network.https_ex": "1"})
     return cursor
 
 @require_safe
@@ -64,8 +65,7 @@ def index(request):
                                 tlpamberusers=get_tlp_users(request.user))
     tasks_urls = db.list_tasks(limit=200, category="url", not_status=TASK_PENDING, tlpuser=request.user.username,
                                tlpamberusers=get_tlp_users(request.user))
-	#TODO: Make ES host config-based 							   
-    es = Elasticsearch('bm-es0:9200')
+    es = settings.ELASTIC
     yara_query = create_tlp_query(request.user, {"term": {"_type": "yara"}})
     suri_query = create_tlp_query(request.user, {"term": {"_type": "suricata"}})
     tasks_yhunts = es.search(index="hunt-*", body=yara_query)
@@ -82,18 +82,27 @@ def index(request):
             for m in mobj:
                 if 'behavior' in m:
                     new["processes"] = m["behavior"]["processes"]
-                myhttps= []
+                myhttp = []
                 if ('network' in m) and ('https_ex' in m["network"]):
                     for mht in m["network"]["https_ex"]:
                         if mht["host"] not in domains:
-                            myhttps.append(mht)
-                myhttp=[]
+                            full_url = mht["protocol"] + '://' + mht["host"] + '/' + mht["uri"]
+                            # TODO: Fix Bluecoat
+                            # mycat = bluecoat_sitereview(full_url)
+                            mht["full_url"] = full_url
+                            # mht["category"] = mycat
+                            myhttp.append(mht)
+
                 if ('network' in m) and ('http_ex' in m["network"]):
                     for mh in m["network"]["http_ex"]:
                         if mh["host"] not in domains:
+                            full_url = mh["protocol"] + '://' + mh["host"] + '/' + mh["uri"]
+                            # TODO: Fix Bluecoat
+                            # mycat = bluecoat_sitereview(full_url)
+                            mh["full_url"] = full_url
+                            # mh["category"] = mycat
                             myhttp.append(mh)
-                if myhttps:
-                    new["https"] = myhttps
+
                 if myhttp:
                     new["http"] = myhttp
             filename = os.path.basename(new["target"])
@@ -319,9 +328,9 @@ def report(request, task_id):
             or 'tlp' not in report['info'] \
             or not (report['info']['tlp'] == 'green'
                     or (
-                                report['info']['tlp'] == 'amber' and report['info']['owner'] in get_tlp_users(
-                            request.user)) \
-                            or (report['info']['tlp'] == 'red' and report['info']['owner'] == request.user.username)):
+                            report['info']['tlp'] == 'amber' and report['info']['owner'] in get_tlp_users(
+                        request.user)) \
+                    or (report['info']['tlp'] == 'red' and report['info']['owner'] == request.user.username)):
         return render(request, "error.html", {
             "error": "You are not tall enough to ride the ride.",
         })
@@ -350,7 +359,7 @@ def report(request, task_id):
 
     # Is this version of httpreplay deprecated?
     deprecated = httpreplay_version and \
-        versiontuple(httpreplay_version) < versiontuple(LATEST_HTTPREPLAY)
+                 versiontuple(httpreplay_version) < versiontuple(LATEST_HTTPREPLAY)
 
     return render(request, "analysis/report.html", {
         "analysis": report,
@@ -565,20 +574,24 @@ def remove(request, task_id):
                 fs.delete(ObjectId(shot))
 
         # Delete network pcap.
-        if "pcap_id" in analysis["network"] and results_db.analysis.find({"network.pcap_id": ObjectId(analysis["network"]["pcap_id"])}).count() == 1:
+        if "pcap_id" in analysis["network"] and results_db.analysis.find(
+                {"network.pcap_id": ObjectId(analysis["network"]["pcap_id"])}).count() == 1:
             fs.delete(ObjectId(analysis["network"]["pcap_id"]))
 
         # Delete sorted pcap
-        if "sorted_pcap_id" in analysis["network"] and results_db.analysis.find({"network.sorted_pcap_id": ObjectId(analysis["network"]["sorted_pcap_id"])}).count() == 1:
+        if "sorted_pcap_id" in analysis["network"] and results_db.analysis.find(
+                {"network.sorted_pcap_id": ObjectId(analysis["network"]["sorted_pcap_id"])}).count() == 1:
             fs.delete(ObjectId(analysis["network"]["sorted_pcap_id"]))
 
         # Delete mitmproxy dump.
-        if "mitmproxy_id" in analysis["network"] and results_db.analysis.find({"network.mitmproxy_id": ObjectId(analysis["network"]["mitmproxy_id"])}).count() == 1:
+        if "mitmproxy_id" in analysis["network"] and results_db.analysis.find(
+                {"network.mitmproxy_id": ObjectId(analysis["network"]["mitmproxy_id"])}).count() == 1:
             fs.delete(ObjectId(analysis["network"]["mitmproxy_id"]))
 
         # Delete dropped.
         for drop in analysis.get("dropped", []):
-            if "object_id" in drop and results_db.analysis.find({"dropped.object_id": ObjectId(drop["object_id"])}).count() == 1:
+            if "object_id" in drop and results_db.analysis.find(
+                    {"dropped.object_id": ObjectId(drop["object_id"])}).count() == 1:
                 fs.delete(ObjectId(drop["object_id"]))
 
         # Delete calls.

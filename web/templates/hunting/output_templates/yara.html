@@ -1,0 +1,33 @@
+<div class="bs-callout bs-callout-primary">
+    <h4>Matched Analysis <a href="/analysis/{{ result.analysis_id }}">{{ result.analysis_id }}</a></h4>
+    [<a href="/analysis/{{ result.analysis_id }}">Analysis</a> - <a
+        href="/hunting/pcap/{{ result.analysis_id }}">PCAP</a>]
+    <br/>
+    Signature: {{ result.alert.signature }}<br/>
+    File hit: {{ result.raw_filename }}<br />
+    <br/>
+    {% if result.file_dropped %}
+    <strong>Dropped files</strong>
+    <ul>
+        {% for file in result.file_dropped %}
+        <li>Filename: {{ file.file_path }}</li>
+        <li>SHA256: {{ file.file_sha256 }}</li>
+        {% if file.command_line %}
+        <br />
+        Command Line
+            <ul>
+                {% for line in file.command_line %}
+                <li>
+                    <ul>
+                        <li>Command line: {{ line.command_line }}</li>
+                        <li>Parent PID: {{ line.parent }}</li>
+                        <li>Parent Command line: {{ line.parent_command_line}}</li>
+                    </ul>
+                </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        {% endfor %}
+    </ul>
+    {% endif %}
+</div>

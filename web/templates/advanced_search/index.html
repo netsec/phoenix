@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% block content %}
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $.fn.dataTable.moment( 'MMM. D, YYYY, H:mm a');
+            $('#file_table').DataTable();
+            $.getJSON("{% static 'fields.json'%}", function (data) {
+                fields = [];
+                for (index in data) {
+                    var obj = data[index];
+                    fields.push({"id": obj.name, "type": obj.type})
+                }
+                {%  if lastSearch %}
+
+                    let rules = JSON.parse('{{ lastSearch|safe }}');
+
+                    if (rules)
+                        $('#queryBuilder').queryBuilder({
+                            filters: fields,
+                            rules: rules
+                        });
+                {% else %}
+                    $('#queryBuilder').queryBuilder({
+                        filters: fields
+                    });
+                {% endif %}
+            });
+            $('#queryBuilder').keypress(function (e) {
+                var key = e.which;
+                if (key == 13)  // the enter key code
+                {
+                    $('#queryBuilder').queryBuilder('validate');
+                    $('#btnSubmit').click();
+                    return false;
+                }
+            });
+        });
+    </script>
+    <script src="{% static 'search.js' %}"></script>
+
+
+    <div id="queryBuilder"></div>
+    <button class="btn-primary" onclick="buildQuery('queryBuilder')" id="btnSubmit">Filter</button>
+    <button class="btn-primary" onclick="window.open('{{ moloch_url }}')">View in Moloch</button>
+
+    <div class="tab-content">
+        <div class="tab-pane fade in active" id="files">
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Advanced Query</h3>
+                </div>
+                {% if files %}
+                    <table class="table table-striped" style="table-layout: fixed;" id="file_table">
+                        <thead>
+                        <tr>
+                            <th width="150">Timestamp</th>
+                            <th width="200">Filename</th>
+                            <th width="150">MD5</th>
+                            <th>Command Lines</th>
+                            <th>Stage 2+ URLs</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for analysis in files %}
+                            <tr>
+                                <td width="150" data-order="{{ analysis.ended|date:"Y/m/d H:i" }}">
+                                   {{ analysis.ended }}
+
+                                </td>
+                                <td width="200">
+                                    {{ analysis.filename }}
+                                </td>
+                                <td width="150" style="word-wrap: break-word;">
+                                    {% if analysis.id %}
+                                        <a href="{% url "analysis.views.report" analysis.id %}"><span
+                                                class="mono">{{ analysis.md5 }}</span></a>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    <ul>{% for process in analysis.processes %}
+                                        <li class="mono">{{ process.command_line|truncatechars:250 }}</li>
+                                    {% endfor %}</ul>
+
+                                </td>
+                                <td>
+                                    {% if  analysis.http %}
+                                        <table>
+                                            <tbody>
+                                            {% for myurl in analysis.http %}
+                                                <tr>
+                                                    <td colspan="2"><span class="mono"><a target="_blank"
+                                                                                          href="{% url "analysis.views.moloch" src_ip=myurl.src src_port=myurl.sport dst_ip=myurl.dst dst_port=myurl.dport %}">{{ myurl.full_url }}</a></span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+
+                                                    <td width="512">
+                                                        <span class="mono http">{{ myurl.request }}</span>
+                                                    </td>
+                                                    <td width="512">
+                                                        <span class="mono http">{{ myurl.response }}</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        <hr/>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+
+                                            </tbody>
+                                        </table>
+                                    {% endif %}
+                                </td>
+
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="panel-body">No files analyzed yet.</div>
+                {% endif %}
+            </div>
+        </div>
+
+
+    </div>
+    <form id="subForm" role="form" action="" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+    </form>
+{% endblock %}

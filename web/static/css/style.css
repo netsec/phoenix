@@ -241,3 +241,10 @@ td {
 .bs-callout-info h4 {
     color: #5bc0de;
 }
+.http {
+    white-space:pre-wrap;
+}
+
+.sort_field {
+    display: none;
+}

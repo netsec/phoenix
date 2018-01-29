@@ -17,6 +17,7 @@ uuid = ""
 tlp = ""
 g_rules_path = ""
 
+
 def index_yara(ybody):
     es = Elasticsearch(my_es)
     es.index(index="hunt-" + d, doc_type="yara", body=ybody)
@@ -42,36 +43,55 @@ def getMore(id, fn, body):
             dropped_file["command_line"] = []
             for pr in filter(lambda pr: pr["pid"] in pids, hit["behavior"]["processes"]):
                 process = dict(command_line=pr["command_line"], parent=pr["ppid"], parent_command_line=[])
-                parent_command_line = next(
-                    par for par in hit["behavior"]["processes"] if par["pid"] == process["parent"])
-                process["parent_command_line"] = parent_command_line["command_line"]
+                try:
+                    parent_command_line = next(
+                        par for par in hit["behavior"]["processes"] if par["pid"] == process["parent"])
+                    process["parent_command_line"] = parent_command_line["command_line"]
+                except StopIteration:
+                    print "no parent command line for {0}".format(id)
                 dropped_file["command_line"].append(process)
             body["file_dropped"].append(dropped_file)
     return body
 
+#def getAnalId(filename):
+#    last = os.readlink('/ssd/cuckoo/cuckoo/storage/analyses/latest').split('/')[-1]
+#    for i in range(1, int(last)):
+#        if os.path.exists('/ssd/cuckoo/cuckoo/storage/analyses/' + str(i) + '/binary'):
+#            if os.readlink('/ssd/cuckoo/cuckoo/storage/analyses/' + str(i) + '/binary') == filename:
+#                return int(i)
 
-def ruleCallback(data, filename):
+def ruleCallback(data, filename, anal_id):
     if data["matches"]:
         data.pop("strings")
         data["tlp"] = tlp
         data["username"] = owner
         data["uuid"] = uuid
-        data["run_date"] = now.strftime("%B %D %Y, %I:%M %p")
+        data["run_date"] = now.strftime("%Y-%m-%d %H:%M:%S")
         data["raw_filename"] = filename
-        anal_id = int(filename.split("/")[2])
         data["analysis_id"] = int(anal_id)
         data["alert"] = dict(signature=data["rule"])
         data = getMore(anal_id, filename.split("/")[-1], data)
         index_yara(data)
 
 
-def scan_files(rules_path, folder_path):
+def scan_files(rules_path, folder_paths_file):
     rules = yara.compile(filepath=rules_path)
-    for root, directories, files in os.walk(folder_path):
-        for analysis_file in files:
-            filename = os.path.join(root, analysis_file)
-            rules.match(filename, callback=lambda rule_data: ruleCallback(rule_data, filename))
-
+    paths = []
+    with open(folder_paths_file, 'r') as folder_paths:
+        for aline in folder_paths.read().splitlines():
+            paths.append(aline)
+    # print paths
+    for path in paths:
+        anal_id = path.split('/')[-2]
+        if path.endswith('/binary'):
+            fname = os.readlink(path)
+            rules.match(fname, callback=lambda rule_data: ruleCallback(rule_data, fname, anal_id))
+        else:
+            for root, directories, files in os.walk(path, followlinks=True):
+                for analysis_file in files:
+                    filename = os.path.join(root, analysis_file)
+                    #print filename
+                    rules.match(filename, callback=lambda rule_data: ruleCallback(rule_data, filename, anal_id))
             # analysis_files.append(filename)
 
     # p = multiprocessing.Pool(12)
@@ -81,6 +101,8 @@ def scan_files(rules_path, folder_path):
     # p.map(match_rule, [x for x in analysis_files if isinstance(x, basestring)])
     # p.close()
     # p.join()
+
+
 #
 #
 # def match_rule(filename):
@@ -103,10 +125,10 @@ def main():
                         action='store',
                         help='Path to Yara rules directory')
 
-    parser.add_argument('-s', '--scan_dir',
+    parser.add_argument('-s', '--scan_folders',
                         action='store',
                         default=os.getcwd(),
-                        help='Path to the directory of files to scan (optional otherwise current dir is scanned)')
+                        help='Path to file with paths inside')
 
     parser.add_argument('-u', '--uuid',
                         action='store',
@@ -128,7 +150,10 @@ def main():
     tlp = args.tlp
     global uuid
     uuid = args.uuid
-    scan_files(args.yara_dir, args.scan_dir)
+    print args
+    # print os.listdir(args.scan_folders)
+    print os.listdir('/')
+    scan_files(args.yara_dir, args.scan_folders)
 
 
 if __name__ == "__main__":

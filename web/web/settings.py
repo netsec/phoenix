@@ -122,6 +122,7 @@ STATIC_URL = '/static/'
 # Additional locations of static files
 STATICFILES_DIRS = (
     os.path.join(os.getcwd(), 'static'),
+    os.path.join(os.getcwd(),'advanced_search','search')
 )
 
 # List of finder classes that know how to find static files in
@@ -226,9 +227,10 @@ LOGGING = {
 }
 
 #TODO Use CWD or whatever
-SURICATA_PATH=''
-ANALYSES_PREFIX=''
-YARA_DOCKER_IMAGE= 'devyara'
+SURICATA_PATH = os.path.join(CUCKOO_PATH, '..', 'docker','suricata','suricata.yaml')
+ANALYSES_PREFIX = os.path.join(CUCKOO_PATH,'..','storage','analyses')
+YARA_DOCKER_IMAGE = 'prodyara'
+SURICATA_DOCKER_IMAGE = 'prodsuricata'
 # Hack to import local settings.
 try:
     LOCAL_SETTINGS

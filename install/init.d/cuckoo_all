@@ -1,0 +1,63 @@
+#!/bin/bash
+#
+#       /etc/rc.d/init.d/<servicename>
+#
+#       <description of the *service*>
+#       <any general comments about this init script>
+#
+# <tags -- see below for tag definitions.  *Every line* from the top
+#  of the file to the end of the tags section must begin with a #
+#  character.  After the tags section, there should be a blank line.
+#  This keeps normal comments in the rest of the file from being
+#  mistaken for tags, should they happen to fit the pattern.>
+
+# Source function library.
+. /etc/init.d/functions
+PROGNAMES=( cuckoorooter cuckoop cuckood cuckooweb cuckooapi )
+#DROPUSER="cuckoo"
+#MYHOMEDIR="CUCKOODIR/utils"
+#LOGFILE="/var/log/cuckoo/rooter.log"
+#OPTIONS="--service /sbin/service"
+
+start() {
+	for PROGNAME in "${PROGNAMES[@]}"; do
+        	echo "Starting $PROGNAME: "
+		/etc/init.d/$PROGNAME start
+		#if [ "$PROGNAME" == "cuckoorooter" ]; then
+		#	sleep 20
+		#fi
+	done
+}
+
+stop() {
+	for PROGNAME in "${PROGNAMES[@]}"; do
+        	echo "Stopping $PROGNAME: "
+		/etc/init.d/$PROGNAME stop
+	done
+}
+status() {
+	for PROGNAME in "${PROGNAMES[@]}"; do
+		/etc/init.d/$PROGNAME status
+	done
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+	status
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    *)
+        echo "Usage: <servicename> {start|stop|status|reload|restart[|probe]"
+        exit 1
+        ;;
+esac
+exit $?
