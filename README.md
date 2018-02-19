@@ -85,7 +85,7 @@ Enter cuckoo user password when prompted
 VirtualBox OVA copy and import takes time.  Get more coffee...
 
 ##### 11. Fill in django admin credentials
-This is the user which will create and manage trust groups within Phoenix
+This is the user which will create and manage trust groups within Phoenix Web UI
 
 #### `ubuntu_install.sh` will exit now but a few steps remain
 
