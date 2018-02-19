@@ -177,9 +177,12 @@ cuckooapi is running
 
 [Phoenix Presentation](https://docs.google.com/presentation/d/1Esvck465UX2REGijGnZtS6_GugstS5NIJC2uvO2g0C0/edit?usp=sharing)
 
+###### We would like to see these changes forked back to the main branch and will be working with the Cuckoo developers to merge our changes
+
+
 ## About Cuckoo
 
-![Cuckoo](http://cuckoosandbox.org/graphic/cuckoo.png)
+![Cuckoo](http://cuckoosandbox.org/assets/images/cuckoo-white.png)
 
 In three words, [Cuckoo Sandbox](http://www.cuckoosandbox.org) is a malware analysis system.
 
