@@ -169,7 +169,7 @@ cuckooapi is running
 * Sometimes there are install issues if your system already has the yara python package installed.
   * This package from the requirements.txt should get you a functioning version for cuckoo: `yara-python==3.7.0`
 * If you have imported your VMs already, remember to edit `conf/virtualbox.conf` before bouncing services
-* If you run the install again, it will clobber the `conf/virtualbox.conf`, you'll need to set it up again        // #TODO - fix that
+* If you run the install again, it will clobber the `conf/virtualbox.conf`, you'll need to set it up again #TODO - fix that
 
 ### See Phoenix in action
 
