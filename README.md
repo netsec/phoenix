@@ -182,7 +182,7 @@ cuckooapi is running
 
 ## About Cuckoo
 
-![Cuckoo](http://cuckoo.sh/_static/cuckoo.png)
+![Cuckoo](http://cuckoo.sh/docs/_static/cuckoo.png)
 
 In three words, [Cuckoo Sandbox](http://www.cuckoosandbox.org) is a malware analysis system.
 
