@@ -16,19 +16,19 @@
 * yara
 
 
-##### Move the code on to your system
+##### 1. Move the code on to your system
 ```bash 
     git clone https://github.com/SparkITSolutions/cuckoo.git /opt/phoenix
 ```
 
-##### Copy over your openvpn profiles
+##### 2. Copy over your openvpn profiles
 Make sure you can login to your openvpn nodes from the command line with the configs before installing them with phoenix.  The configs will end up in /etc/openvpn/ on the installed system.
 ```bash
 scp user@host:~/install/openvpn/* /opt/phoenix/install/openvpn/
 ```
 
 
-##### Copy VirtualBox OVA files
+##### 3. Copy VirtualBox OVA files
 By default the `install/ubuntu_install.sh` file will take OVA files which have been dropped in the install/virtualbox folder and install them.  
 ```bash
 scp user@host:~/*.ova /opt/phoenix/install/virtualbox/
@@ -42,23 +42,23 @@ If you already have VMs setup you can import them by copying the entire folder o
 vboxmanage registervm /full/path/to/vm.box
 ```
 
-#### Stop and edit install/ubuntu_install.sh lines 70 - 100
+#### 4. Stop and edit install/ubuntu_install.sh lines 70 - 100
 ###### That's where all your DB, username and password configuration info lives for the install
 ```bash
 vim /opt/phoenix/install/ubuntu_install.sh +70
 ```
 
-##### Jump to your install dir
+##### 5. Jump to your install dir
 ```bash
 cd /opt/phoenix/install
 ```
 
-##### Start your install
+##### 6. Start your install
 ```bash
 bash ubuntu_install.sh
 ```
 
-##### Accept default for iptables (we're going to configure that later)
+##### 7. Accept default for iptables (we're going to configure that later)
 ![iptablesv4](./install/screencaps/iptables4.png "iptablesv4")
 ![iptablesv6](./install/screencaps/iptables6.png "iptablesv6")
 
