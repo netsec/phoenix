@@ -67,14 +67,14 @@ bash ubuntu_install.sh
 ##### Installs take time
 Get a coffee, this takes a bit (3-5 min)
 
-##### Accept VirtualBox EULA
+##### 8. Accept VirtualBox EULA
 ![vboxlicense](./install/screencaps/vboxlic.png "vboxlicense")
 
-##### Setup cuckoo OS user
+##### 9. Setup cuckoo OS user
 Enter cuckoo user password when prompted
 
 
-##### Setup your moloch install
+##### 10. Setup your moloch install
 * Type in vboxnet0 for your vmnetwork
 * No don't install ES
 * Type in your docker ES address (default http://172.18.1.253:9200)
@@ -84,16 +84,16 @@ Enter cuckoo user password when prompted
 
 VirtualBox OVA copy and import takes time.  Get more coffee...
 
-##### Fill in django admin credentials
+##### 11. Fill in django admin credentials
 This is the user which will create and manage trust groups within Phoenix
 
 ## `ubuntu_install.sh` will exit now but a few steps remain
 
-### Setup your cuckoo guest
-#### **This is better off done on another machine and simply having vbox files imported
+#### Setup your cuckoo guest
+##### **This is better off done on another machine and simply having vbox files imported
 #TODO Add support for deploying pre saved vbox images
 
-##### Setup and take a clean snapshot of your VMs so cuckoo can interact
+##### 12. Setup and take a clean snapshot of your VMs so cuckoo can interact
 ###### Startup your VM
 
 ```bash
@@ -105,14 +105,14 @@ vboxheadless -v on -e authType=NULL -s win7-x86-0
 ```
 You can now RDP to 127.0.0.1:3389 on your Phoenix system to configure the guest OS
 
-### Setup your VM from the guest, with python agent and office, etc.
-##### Once done, take your clean snapshot and you're ready for cuckoo
+#### Setup your VM from the guest, with python agent and office, etc.
+##### 13. Once done, take your clean snapshot and you're ready for cuckoo
 ```bash
 vboxmanage snapshot win7-x86-0 take clean
 ```
 
 
-### Restart everything
+#### 14. Restart everything
 ```bash
 /opt/phoenix/utils/crontab/root/cuckoo_full_restart.sh
 ```
@@ -143,7 +143,7 @@ Starting cuckooapi:
 Starting api.py:
 ```
 
-#### Check things
+#### 15. Check things
 ```
 /etc/init.d/cuckoo_all status
 ```
