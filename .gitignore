@@ -39,3 +39,8 @@ venv
 # Python package stuff
 lib/python2.7/
 build/
+modules/signatures/
+agent/android/
+analyzer/windows/bin/procmon.pmc
+docs/book/
+docs/epydoc/
