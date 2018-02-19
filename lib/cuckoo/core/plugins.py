@@ -235,7 +235,8 @@ class RunProcessing(object):
         current.set_options(options)
         # Give the results that we have obtained so far.
         current.set_results(results)
-
+        # TODO: Phase 2
+        # current.memory_path = os.path.join(CUCKOO_ROOT, "storage","memory", str(self.task["id"]), "memory.dmp")
         try:
             # Run the processing module and retrieve the generated data to be
             # appended to the general results container.

@@ -50,6 +50,17 @@ class Moloch(Report):
             for field in ("md5", "sha1", "sha256", "sha512"):
                 if field in f:
                     tags[field] = f[field]
+            # Tag suri hits.
+            #g = results.get("suricata", {}).get("alerts", {})
+            #for myf in g:
+            #    sip = myf["src_ip"]
+            #    sport = myf["src_port"]
+            #    dport = myf["dst_port"]
+            #    dip = myf["dst_ip"]
+            #    signame = myf["signature"].replace(" ", "_")
+            #    proto = myf["protocol"]
+            #    if field in g:
+            #        tags[field] = g[field]
 
             # Tag normalized VirusTotal results.
             for variant in results.get("virustotal", {}).get("normalized", []):

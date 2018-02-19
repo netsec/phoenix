@@ -2,14 +2,13 @@
 import argparse
 import datetime
 import multiprocessing
-import os
+import os, sys
 
 import yara
 from elasticsearch import Elasticsearch
 from pymongo import MongoClient
-
-my_es = "10.200.10.20:9200"
-my_mongo = "10.200.10.21:27017"
+my_es = ""
+my_mongo = ""
 now = datetime.datetime.today()
 d = now.strftime("%Y%m%d")
 owner = ""
@@ -79,7 +78,7 @@ def scan_files(rules_path, folder_paths_file):
     paths = []
     with open(folder_paths_file, 'r') as folder_paths:
         for aline in folder_paths.read().splitlines():
-            paths.append(aline)
+            paths.append(os.path.abspath(aline))
     # print paths
     for path in paths:
         anal_id = path.split('/')[-2]
@@ -143,6 +142,14 @@ def main():
                         action='store',
                         default="green",
                         help='TLP setting of the hunt')
+    parser.add_argument('-m', '--mongo',
+                        action='store',
+                        default="",
+                        help='Mongo host')
+    parser.add_argument('-e', '--es',
+                        action='store',
+                        default="",
+                        help='ES host')
     args = parser.parse_args()
     global owner
     owner = args.owner
@@ -150,10 +157,14 @@ def main():
     tlp = args.tlp
     global uuid
     uuid = args.uuid
+    global my_mongo
+    my_mongo = args.mongo
+    global my_es
+    my_es = args.es
     print args
     # print os.listdir(args.scan_folders)
     print os.listdir('/')
-    scan_files(args.yara_dir, args.scan_folders)
+    scan_files(os.path.abspath(args.yara_dir), os.path.abspath(args.scan_folders))
 
 
 if __name__ == "__main__":

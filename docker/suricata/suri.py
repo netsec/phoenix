@@ -105,17 +105,18 @@ def main():
     user = str(sys.argv[2])
     tlp = str(sys.argv[3])
     slice_num = str(sys.argv[4])
-    run_in_suri(myuuid, slice_num, tlp, user)
+    eshost ="http://"+str(sys.argv[5])
+    run_in_suri(myuuid, slice_num, tlp, user,eshost)
 
 
-def run_in_suri(myuuid, slice_num, tlp, user):
+def run_in_suri(myuuid, slice_num, tlp, user, eshost):
     hdir = "/input/.hunting/" + myuuid + "/" + slice_num
     suri = "/usr/bin/suricata"
     # suriConf="/etc/suricata/suricata-debian.yaml"
     suriConf = hdir + "/suricata.yaml"
     suriRule = hdir + "/all.rules"
     ifile = hdir + "/infiles"
-    eshost = "10.200.10.20:9200"    #TODO: Put this host in config
+    # eshost = "10.200.10.20:9200"    #TODO: Put this host in config
     backgroundSuri(suriConf, suriRule, suri, hdir)
     g = getFiles(ifile)
     while not os.path.exists(SOCKET_PATH):

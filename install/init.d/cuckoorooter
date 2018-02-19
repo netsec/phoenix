@@ -18,12 +18,12 @@ NAME="cuckoorooter"
 #DROPUSER="CUCKOO_USER"
 MYHOMEDIR="CUCKOODIR/utils"
 LOGFILE="/var/log/cuckoo/rooter.log"
-OPTIONS="--service /sbin/service"
+OPTIONS=""
 
 start() {
         echo -n "Starting $PROGNAME: "
-	cd "$MYHOMEDIR" ; /usr/local/bin/python2.7 $PROGNAME $OPTIONS  >> "$LOGFILE" 2>&1 &
-	sleep 10 ; /root/.scripts/fix_openvpn.sh 2>/dev/null
+	cd "$MYHOMEDIR" ; python2.7 $PROGNAME $OPTIONS  >> "$LOGFILE" 2>&1 &
+	sleep 10 ; ${MYHOMEDIR}/crontab/root/openvpn_route.sh 2>/dev/null
 	return $?
 }
 

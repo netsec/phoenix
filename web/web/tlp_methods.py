@@ -8,7 +8,7 @@ def get_tlp_users(user):
     for g in user.groups.all():
         l.append(g.name)
     usersInGroup = User.objects.filter(groups__name__in=l)
-    return [u.username for u in usersInGroup]
+    return list(set([u.username for u in usersInGroup]+[user.username]))
 
 
 def get_analyses_numbers_matching_tlp(username, usersInGroup):

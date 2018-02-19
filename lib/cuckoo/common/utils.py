@@ -425,7 +425,8 @@ def json_hook(obj):
     """JSON object hook, deserializing datetimes ($date)"""
     if "$dt" in obj:
         x = obj["$dt"]
-        return datetime.strptime(x, "%Y-%m-%dT%H:%M:%S.%f")
+        #removed .%f because it's not in mysql
+        return datetime.strptime(x, "%Y-%m-%dT%H:%M:%S")
     return obj
 
 def json_encode(obj, **kwargs):

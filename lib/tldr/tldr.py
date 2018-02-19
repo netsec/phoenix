@@ -17,7 +17,6 @@ httpMemList = []
 domainList = []
 ipList = []
 output = {"File": {}}
-# myes = "bm-es0:9200"
 myid = 0
 
 
@@ -35,9 +34,7 @@ cliIgnore = getList("cli")
 
 
 def memPrune(obj):
-    if obj not in crls + sengines:
-        return True
-
+    return obj not in crls + sengines
 
 def httpPrune(obj):
     dmn = obj.split("://")[1].split("/")[0]
@@ -52,10 +49,9 @@ def molochEsQuery(query):
 
 
 def mongoQuery(mdbquery):
-    # mdb = "10.200.10.21:27017"
     client = settings.MONGO
-    db = client.cuckoo
-    cursor = db.analysis.find(mdbquery)
+    #db = client.cuckoo
+    cursor = client.analysis.find(mdbquery)
     return cursor
 
 
@@ -108,7 +104,8 @@ def MD5H(dmd5, md5src, drophit, local, md5, d):
                     dobj["AV_Hits"][vscan] = drophit["virustotal"]["scans"][vscan]["result"]
         if md5src not in output:
             output[md5src] = []
-        output[md5src].append(dobj)
+        if dobj not in output["Dropped_In_Other_Samples"]:
+            output[md5src].append(dobj)
 
 
 def MD5Https(dmd5, md5src, drophit, local):
@@ -146,9 +143,10 @@ def run_tldr(myid, user, clionly):
             for vscan in doc["virustotal"]["scans"]:
                 if doc["virustotal"]["scans"][vscan]["detected"]:
                     output["File"]["AV_Hits"][vscan] = doc["virustotal"]["scans"][vscan]["result"]
-        for cli in doc["behavior"]["processes"]:
-            if cli not in cliIgnore:
-                output["File"]["Command_Lines"].append(cli["command_line"])
+        if 'behavior' in doc:
+            for cli in doc["behavior"]["processes"]:
+                if cli not in cliIgnore:
+                    output["File"]["Command_Lines"].append(cli["command_line"])
         if 'procmemory' in doc:
             for pm in doc["procmemory"]:
                 ntw_mem = pm["urls"]

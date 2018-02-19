@@ -4,6 +4,8 @@
 # See the file 'docs/LICENSE' for copying permission.
 
 import os
+
+import requests
 import sys
 
 from django.conf import settings
@@ -20,6 +22,7 @@ from lib.cuckoo.core.rooter import vpns
 
 results_db = settings.MONGO
 cfg = Config()
+processing_cfg = Config("processing")
 
 def force_int(value):
     try:
@@ -45,7 +48,6 @@ def dropped_filepath(task_id, sha1):
             return dropped["path"]
 
     raise ObjectDoesNotExist
-
 
 @login_required
 def render_index(request, kwargs={}):
@@ -125,13 +127,7 @@ def index(request, task_id=None, sha1=None):
     tlp = request.POST.get('tlp')
     db = Database()
     task_ids = []
-    task_machines = []
-
-    if machine.lower() == "all":
-        for entry in db.list_machines():
-            task_machines.append(entry.label)
-    else:
-        task_machines.append(machine)
+    task_machines = get_task_machines(db, machine)
 
     # In case of resubmitting a file.
     if request.POST.get("category") == "file":
@@ -153,28 +149,51 @@ def index(request, task_id=None, sha1=None):
             if task_id:
                 task_ids.append(task_id)
 
-    elif request.FILES.getlist("sample"):
-        samples = request.FILES.getlist("sample")
-        for sample in samples:
-            # Error if there was only one submitted sample and it's empty.
-            # But if there are multiple and one was empty, just ignore it.
-            if not sample.size:
-                if len(samples) != 1:
-                    continue
+    elif request.FILES.getlist("sample") or request.POST["vt_hashes"]:
+        paths = []
+        if request.FILES.getlist("sample"):
+            samples = request.FILES.getlist("sample")
+            for sample in samples:
+                # Error if there was only one submitted sample and it's empty.
+                # But if there are multiple and one was empty, just ignore it.
+                if not sample.size:
+                    if len(samples) != 1:
+                        continue
 
+                    return render(request, "error.html", {
+                        "error": "You uploaded an empty file.",
+                    })
+                elif sample.size > settings.MAX_UPLOAD_SIZE:
+                    return render(request, "error.html", {
+                        "error": "You uploaded a file that exceeds that maximum allowed upload size.",
+                    })
+
+                # Moving sample from django temporary file to Cuckoo temporary
+                # storage to let it persist between reboot (if user like to
+                # configure it in that way).
+                path = store_temp_file(sample.read(), sample.name)
+                paths.append(path)
+        else:
+            #logger.info(mytime + ' downloading file')
+            vt_key = request.POST["vt_apikey"]
+            if not vt_key:
                 return render(request, "error.html", {
-                    "error": "You uploaded an empty file.",
+                    "error": "You must supply a VT API Key.",
                 })
-            elif sample.size > settings.MAX_UPLOAD_SIZE:
-                return render(request, "error.html", {
-                    "error": "You uploaded a file that exceeds that maximum allowed upload size.",
-                })
+            for vt_hash in request.POST["vt_hashes"].split():
 
-            # Moving sample from django temporary file to Cuckoo temporary
-            # storage to let it persist between reboot (if user like to
-            # configure it in that way).
-            path = store_temp_file(sample.read(), sample.name)
+                params = {'apikey': vt_key, 'hash': vt_hash}
+                response = requests.get(processing_cfg.virustotal.get("downloadurl"), params=params)
+                try:
+                    response.raise_for_status()
+                except requests.HTTPError as e:
+                    return render(request, "error.html", {
+                        "error": "{0}".format(e),
+                    })
+                path = store_temp_file(response.content, vt_hash)
+                paths.append(path)
 
+        for path in paths:
             for entry in task_machines:
                 task_id = db.add_path(file_path=path,
                                       package=package,
@@ -245,6 +264,16 @@ def index(request, task_id=None, sha1=None):
         return render(request, "error.html", {
             "error": "Error adding task to Cuckoo's database.",
         })
+
+
+def get_task_machines(db, machine):
+    task_machines = []
+    if machine.lower() == "all":
+        for entry in db.list_machines():
+            task_machines.append(entry.label)
+    else:
+        task_machines.append(machine)
+    return task_machines
 
 
 @login_required

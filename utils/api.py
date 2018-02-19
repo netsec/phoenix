@@ -9,6 +9,8 @@ import sys
 import socket
 import tarfile
 import argparse
+import traceback
+import json
 from datetime import datetime
 from StringIO import StringIO
 from zipfile import ZipFile, ZIP_STORED
@@ -19,7 +21,10 @@ except ImportError:
     sys.exit("ERROR: Flask library is missing (`pip install flask`)")
 
 sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), ".."))
-
+sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", "web", "web"))
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
+from django.conf import settings
+from web.web.tlp_methods import get_analyses_numbers_matching_tlp
 from lib.cuckoo.common.constants import CUCKOO_VERSION, CUCKOO_ROOT
 from lib.cuckoo.common.utils import store_temp_file, delete_folder
 from lib.cuckoo.core.database import Database, TASK_RUNNING, Task
@@ -32,12 +37,17 @@ db = Database()
 
 # Initialize Flask app.
 app = Flask(__name__)
+domains = set()
+for domain in open(os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", "data", "whitelist", "domain.txt")):
+    domains.add(domain.strip())
+
 
 def json_error(status_code, message):
     """Return a JSON object with a HTTP error code."""
     r = jsonify(message=message)
     r.status_code = status_code
     return r
+
 
 @app.after_request
 def custom_headers(response):
@@ -50,6 +60,7 @@ def custom_headers(response):
     response.headers["Cache-Control"] = "no-cache"
     response.headers["Expires"] = "0"
     return response
+
 
 @app.route("/tasks/create/file", methods=["POST"])
 @app.route("/v1/tasks/create/file", methods=["POST"])
@@ -98,6 +109,7 @@ def tasks_create_file():
 
     return jsonify(task_id=task_id)
 
+
 @app.route("/tasks/create/url", methods=["POST"])
 @app.route("/v1/tasks/create/url", methods=["POST"])
 def tasks_create_url():
@@ -139,6 +151,7 @@ def tasks_create_url():
     )
 
     return jsonify(task_id=task_id)
+
 
 @app.route("/tasks/list")
 @app.route("/v1/tasks/list")
@@ -184,6 +197,7 @@ def tasks_list(limit=None, offset=None):
 
     return jsonify(response)
 
+
 @app.route("/tasks/view/<int:task_id>")
 @app.route("/v1/tasks/view/<int:task_id>")
 def tasks_view(task_id):
@@ -213,6 +227,7 @@ def tasks_view(task_id):
 
     return jsonify(response)
 
+
 @app.route("/tasks/reschedule/<int:task_id>")
 @app.route("/tasks/reschedule/<int:task_id>/<int:priority>")
 @app.route("/v1/tasks/reschedule/<int:task_id>")
@@ -229,9 +244,10 @@ def tasks_reschedule(task_id, priority=None):
         response["task_id"] = new_task_id
     else:
         return json_error(500, "An error occurred while trying to "
-                          "reschedule the task")
+                               "reschedule the task")
 
     return jsonify(response)
+
 
 @app.route("/tasks/delete/<int:task_id>")
 @app.route("/v1/tasks/delete/<int:task_id>")
@@ -242,7 +258,7 @@ def tasks_delete(task_id):
     if task:
         if task.status == TASK_RUNNING:
             return json_error(500, "The task is currently being "
-                              "processed, cannot delete")
+                                   "processed, cannot delete")
 
         if db.delete_task(task_id):
             delete_folder(os.path.join(CUCKOO_ROOT, "storage",
@@ -250,11 +266,12 @@ def tasks_delete(task_id):
             response["status"] = "OK"
         else:
             return json_error(500, "An error occurred while trying to "
-                              "delete the task")
+                                   "delete the task")
     else:
         return json_error(404, "Task not found")
 
     return jsonify(response)
+
 
 @app.route("/tasks/report/<int:task_id>")
 @app.route("/v1/tasks/report/<int:task_id>")
@@ -319,6 +336,7 @@ def tasks_report(task_id, report_format="json"):
     else:
         return json_error(404, "Report not found")
 
+
 @app.route("/tasks/screenshots/<int:task_id>")
 @app.route("/v1/tasks/screenshots/<int:task_id>")
 @app.route("/tasks/screenshots/<int:task_id>/<screenshot>")
@@ -349,6 +367,7 @@ def task_screenshots(task_id=0, screenshot=None):
             return response
         return json_error(404, "Task not found")
 
+
 @app.route("/tasks/rereport/<int:task_id>")
 def rereport(task_id):
     task = db.view_task(task_id)
@@ -361,6 +380,7 @@ def rereport(task_id):
     else:
         return json_error(404, "Task not found")
 
+
 @app.route("/tasks/reboot/<int:task_id>")
 def reboot(task_id):
     reboot_id = Database().add_reboot(task_id=task_id)
@@ -368,6 +388,7 @@ def reboot(task_id):
         return json_error(404, "Error creating reboot task")
 
     return jsonify(task_id=task_id, reboot_id=reboot_id)
+
 
 @app.route("/files/view/md5/<md5>")
 @app.route("/v1/files/view/md5/<md5>")
@@ -394,6 +415,7 @@ def files_view(md5=None, sha256=None, sample_id=None):
 
     return jsonify(response)
 
+
 @app.route("/files/get/<sha256>")
 @app.route("/v1/files/get/<sha256>")
 def files_get(sha256):
@@ -405,6 +427,7 @@ def files_get(sha256):
         return response
     else:
         return json_error(404, "File not found")
+
 
 @app.route("/pcap/get/<int:task_id>")
 @app.route("/v1/pcap/get/<int:task_id>")
@@ -424,6 +447,7 @@ def pcap_get(task_id):
     else:
         return json_error(404, "File not found")
 
+
 @app.route("/machines/list")
 @app.route("/v1/machines/list")
 def machines_list():
@@ -437,6 +461,7 @@ def machines_list():
 
     return jsonify(response)
 
+
 @app.route("/machines/view/<name>")
 @app.route("/v1/machines/view/<name>")
 def machines_view(name=None):
@@ -449,6 +474,7 @@ def machines_view(name=None):
         return json_error(404, "Machine not found")
 
     return jsonify(response)
+
 
 @app.route("/cuckoo/status")
 @app.route("/v1/cuckoo/status")
@@ -517,6 +543,7 @@ def cuckoo_status():
 
     return jsonify(response)
 
+
 @app.route("/memory/list/<int:task_id>")
 def memorydumps_list(task_id):
     folder_path = os.path.join(CUCKOO_ROOT, "storage", "analyses", str(task_id), "memory")
@@ -534,6 +561,7 @@ def memorydumps_list(task_id):
         return jsonify({"dump_files": memory_files})
     else:
         return json_error(404, "Memory dump not found")
+
 
 @app.route("/memory/get/<int:task_id>/<pid>")
 def memorydumps_get(task_id, pid=None):
@@ -555,6 +583,7 @@ def memorydumps_get(task_id, pid=None):
     else:
         return json_error(404, "Memory dump not found")
 
+
 @app.route("/vpn/status")
 def vpn_status():
     status = rooter("vpn_status")
@@ -562,6 +591,22 @@ def vpn_status():
         return json_error(500, "Rooter not available")
 
     return jsonify({"vpns": status})
+
+
+@app.route("/tlp/<string:username>")
+def get_analyses_numbers_for_tlp(username):
+    print "called with " + username
+    try:
+        analyses_nums = get_analyses_numbers_matching_tlp(username, list(set(db.get_analysis_numbers_for_tlp(username)+[username])))
+        forced_expr = "(tags == [" + ",".join(["cuckoo:" + analyses_num for analyses_num in analyses_nums]) + "])"
+        ## To ignore whitelisted domains leave line below uncommented
+        forced_expr += " && (ip.dst != [10.200.0.255,224.0.0.252,239.255.255.250]) && (host != [" + ",".join(
+            domains) + "])"
+        return str(forced_expr)
+    except Exception as e:
+        print e
+        traceback.print_exc()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

@@ -63,6 +63,7 @@ g.symcb.com
 crl.geotrust.com
 javadl-esd-secure.oracle.com
 gn.symcd.com
+gn.symcb.com
 rps-svcs.sun.com
 support.microsoft.com
 helpx.adobe.com
@@ -79,3 +80,6 @@ crl.identrust.com
 ocsp.globalsign.com
 ocsp.comodoca4.com
 evcs-ocsp.ws.symantec.com
+apache.org
+xml.org
+java.sun.com

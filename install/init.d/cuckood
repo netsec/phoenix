@@ -18,7 +18,7 @@ NAME="cuckood"
 DROPUSER="CUCKOO_USER"
 MYHOMEDIR="CUCKOODIR"
 LOGFILE="/var/log/cuckoo/cuckoo.log"
-OPIONS="-d -m 100000"
+OPIONS="-m 1000000"
 
 start() {
         echo "Starting $PROGNAME: "

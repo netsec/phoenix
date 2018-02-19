@@ -18,6 +18,9 @@ def run(*args):
     """Wrapper to Popen."""
     p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
+    print "ARGS - "+str(args)
+    print "STDOUT - "+str(stdout)
+    print "STDERR - "+str(stderr)
     return stdout, stderr
 
 def nic_available(interface):
@@ -95,10 +98,10 @@ def flush_rttable(rt_table):
 def forward_enable(src, dst, ipaddr):
     """Enable forwarding a specific IP address from one interface into
     another."""
-    run(settings.iptables, "-A", "FORWARD", "-i", src, "-o", dst,
+    run(settings.iptables, "-I", "FORWARD", "5", "-i", src, "-o", dst,
         "--source", ipaddr, "-j", "ACCEPT")
 
-    run(settings.iptables, "-A", "FORWARD", "-i", dst, "-o", src,
+    run(settings.iptables, "-I", "FORWARD", "5", "-i", dst, "-o", src,
         "--destination", ipaddr, "-j", "ACCEPT")
 
 def forward_disable(src, dst, ipaddr):

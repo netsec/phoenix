@@ -58,6 +58,7 @@ $(document).ready( function() {
                 <ul class="nav nav-tabs">
                     <li class="active"><a href="#file" data-toggle="tab"><span class="glyphicon glyphicon-file"></span> File</a></li>
                     <li><a href="#url" data-toggle="tab"><span class="glyphicon glyphicon-globe"></span> URL</a></li>
+                    <li><a href="#vt" data-toggle="tab"><span class="glyphicon glyphicon-download"></span> Virustotal Hash</a></li>
                 </ul>
                 {% endif %}
                 <div class="tab-content">
@@ -89,8 +90,17 @@ $(document).ready( function() {
                         <input name="category" type="text" class="form-control hidden" value="URL">
                         {% endif %}
                         <div style="width: 100%;" class="input-group">
-                            <label class="sr-only" form="form_url">URL</label>
+                            <label class="sr-only" for="form_url">URL</label>
                             <input type="text" class="form-control" id="form_url" name="url" placeholder="URL" {% if url %} value="{{url}}" {% endif %} />
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="vt">
+                     <div style="width: 100%;" class="input-group">
+                         <label class="sr-only" for="vt_apikey">VirusTotal API Key</label>
+                         <input type="text" class="form-control" id="vt_apikey" name="vt_apikey" placeholder="API Key" />
+                         <br/>
+                         <label class="sr-only" for="vt_hashes">VirusTotal Hashes</label>
+                         <textarea class="form-control" rows="4" id="vt_hashes" name="vt_hashes" placeholder="Hashes (whitespace separated)"></textarea>
                         </div>
                     </div>
                 </div>

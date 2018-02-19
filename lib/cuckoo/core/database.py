@@ -6,6 +6,7 @@
 import os
 import json
 import logging
+import traceback
 from datetime import datetime
 
 from lib.cuckoo.common.config import Config, parse_options, emit_options
@@ -25,6 +26,7 @@ try:
     from sqlalchemy.exc import SQLAlchemyError, IntegrityError
     from sqlalchemy.orm import sessionmaker, relationship, joinedload
     from sqlalchemy.ext.hybrid import hybrid_property
+
     Base = declarative_base()
 except ImportError:
     raise CuckooDependencyError(
@@ -56,6 +58,7 @@ tasks_tags = Table(
     Column("task_id", Integer, ForeignKey("tasks.id")),
     Column("tag_id", Integer, ForeignKey("tags.id"))
 )
+
 
 class Machine(Base):
     """Configured virtual machines to be used as guests."""
@@ -124,6 +127,7 @@ class Machine(Base):
         self.resultserver_ip = resultserver_ip
         self.resultserver_port = resultserver_port
 
+
 class Tag(Base):
     """Tag describing anything you want."""
     __tablename__ = "tags"
@@ -136,6 +140,7 @@ class Tag(Base):
 
     def __init__(self, name):
         self.name = name
+
 
 class Guest(Base):
     """Tracks guest run."""
@@ -182,6 +187,7 @@ class Guest(Base):
         self.name = name
         self.label = label
         self.manager = manager
+
 
 class Sample(Base):
     """Submitted files details."""
@@ -230,6 +236,7 @@ class Sample(Base):
         if ssdeep:
             self.ssdeep = ssdeep
 
+
 class Error(Base):
     """Analysis errors."""
     __tablename__ = "errors"
@@ -259,6 +266,7 @@ class Error(Base):
 
     def __repr__(self):
         return "<Error('{0}','{1}','{2}')>".format(self.id, self.message, self.task_id)
+
 
 class Task(Base):
     """Analysis task queue."""
@@ -350,11 +358,13 @@ class Task(Base):
     def __repr__(self):
         return "<Task('{0}','{1}')>".format(self.id, self.target)
 
+
 class AlembicVersion(Base):
     """Table used to pinpoint actual database schema release."""
     __tablename__ = "alembic_version"
 
     version_num = Column(String(32), nullable=False, primary_key=True)
+
 
 class Database(object):
     """Analysis queue database.
@@ -1265,7 +1275,8 @@ class Database(object):
         session = self.Session()
         try:
             if details:
-                task = session.query(Task).options(joinedload("guest"), joinedload("errors"), joinedload("tags")).get(task_id)
+                task = session.query(Task).options(joinedload("guest"), joinedload("errors"), joinedload("tags")).get(
+                    task_id)
             else:
                 task = session.query(Task).get(task_id)
         except SQLAlchemyError as e:
@@ -1441,3 +1452,18 @@ class Database(object):
             log.debug("Database error getting new processing tasks: %s", e)
         finally:
             session.close()
+
+    def get_analysis_numbers_for_tlp(self, username):
+        try:
+            session = self.Session()
+            params = {"user": username}
+            query = """SELECT outer_a.username FROM auth_user outer_a, auth_user_groups outer_g WHERE outer_g.user_id = outer_a.id AND outer_g.group_id IN (SELECT g.group_id FROM auth_user a, auth_user_groups g WHERE g.user_id = a.id AND a.username = :user)"""
+            result = list(session.execute(query, params).fetchall())
+            for item in result:
+                print item[0]
+            print [item[0] for item in result]
+            return [item[0] for item in result]
+        except Exception as e:
+            log.debug("Error: %s", e)
+            print e
+            traceback.print_exc()

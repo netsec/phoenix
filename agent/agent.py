@@ -17,7 +17,7 @@ from zipfile import ZipFile
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 
 BIND_IP = "0.0.0.0"
-BIND_PORT = 8000
+BIND_PORT = 8379
 
 STATUS_INIT = 0x0001
 STATUS_RUNNING = 0x0002

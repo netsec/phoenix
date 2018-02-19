@@ -18,7 +18,7 @@ NAME="cuckooweb"
 DROPUSER="CUCKOO_USER"
 MYHOMEDIR="CUCKOODIR/web"
 LOGFILE="/var/log/cuckoo/web.log"
-OPTIONS="runserver 0.0.0.0:8000"
+OPTIONS="runserver 127.0.0.1:8000"
 
 start() {
         echo "Starting $PROGNAME: "

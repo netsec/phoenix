@@ -14,7 +14,8 @@ sys.path.insert(0, CUCKOO_PATH)
 from lib.cuckoo.common.config import Config
 
 cfg = Config("reporting")
-
+cuckoo_conf = Config("cuckoo")
+processing_config = Config("processing")
 # Checks if mongo reporting is enabled in Cuckoo.
 if not cfg.mongodb.get("enabled"):
     raise Exception("Mongo reporting module is not enabled in cuckoo, aborting!")
@@ -39,7 +40,7 @@ if cfg.elasticsearch.get("enabled"):
     for host in cfg.elasticsearch.get("hosts", "127.0.0.1:9200").split(","):
         if host.strip():
             hosts.append(host.strip())
-
+    ELASTIC_HOSTS = hosts
     ELASTIC = elasticsearch.Elasticsearch(hosts)
     ELASTIC_INDEX = cfg.elasticsearch.get("index", "cuckoo")
 else:
@@ -63,8 +64,14 @@ DEBUG = True
 # Database settings. We don't need it but Django auth yes.
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'cuckoo.sqlite',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': cuckoo_conf.database.get("database"),
+        'USER': cuckoo_conf.database.get("user"),
+        'PASSWORD': cuckoo_conf.database.get("password"),
+        'HOST': cuckoo_conf.database.get("host"),
+        'PORT': '3306'
+
+
     }
 }
 
@@ -227,10 +234,12 @@ LOGGING = {
 }
 
 #TODO Use CWD or whatever
-SURICATA_PATH = os.path.join(CUCKOO_PATH, '..', 'docker','suricata','suricata.yaml')
-ANALYSES_PREFIX = os.path.join(CUCKOO_PATH,'..','storage','analyses')
+SURICATA_PATH = os.path.join(CUCKOO_PATH, 'docker','suricata','suricata.yaml')
+ANALYSES_PREFIX = os.path.join(CUCKOO_PATH,'storage','analyses')
 YARA_DOCKER_IMAGE = 'prodyara'
 SURICATA_DOCKER_IMAGE = 'prodsuricata'
+MAX_SURICATA_WORKERS = processing_config.suricata.get("max_suricata_workers")
+
 # Hack to import local settings.
 try:
     LOCAL_SETTINGS

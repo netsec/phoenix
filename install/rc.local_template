@@ -1,0 +1,6 @@
+#CUCKOOLOCALS
+su - CUCKOO_USER -c "vboxmanage hostonlyif ipconfig SANDINT --ip SANDIP --netmask 255.255.255.0"
+su - CUCKOO_USER -c "vboxmanage dhcpserver modify --netname HostInterfaceNetworking-vboxnet0 --disable"
+/bin/echo 'never' > /sys/kernel/mm/transparent_hugepage/defrag
+/bin/echo 'never' > /sys/kernel/mm/transparent_hugepage/enabled
+#ENDCUCKOOLOCALS

@@ -51,8 +51,8 @@ for domain in open(os.path.join(CUCKOO_ROOT, "data", "whitelist", "domain.txt"))
 def getMongoObj(taskid):
     # TODO: Make Mongo host config-based
     client = settings.MONGO
-    mongo_db = client.cuckoo
-    cursor = mongo_db.analysis.find({"info.id": taskid},
+
+    cursor = client.analysis.find({"info.id": taskid},
                               {"behavior.processes": "1", "network.http_ex": "1", "network.https_ex": "1"})
     return cursor
 
@@ -61,9 +61,9 @@ def getMongoObj(taskid):
 def index(request):
     db = Database()
     # TODO: add stuff for when user is not logged in
-    tasks_files = db.list_tasks(limit=200, category="file", not_status=TASK_PENDING, tlpuser=request.user.username,
+    tasks_files = db.list_tasks(limit=50, category="file", not_status=TASK_PENDING, tlpuser=request.user.username,
                                 tlpamberusers=get_tlp_users(request.user))
-    tasks_urls = db.list_tasks(limit=200, category="url", not_status=TASK_PENDING, tlpuser=request.user.username,
+    tasks_urls = db.list_tasks(limit=50, category="url", not_status=TASK_PENDING, tlpuser=request.user.username,
                                tlpamberusers=get_tlp_users(request.user))
     es = settings.ELASTIC
     yara_query = create_tlp_query(request.user, {"term": {"_type": "yara"}})

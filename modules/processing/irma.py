@@ -117,7 +117,6 @@ class Irma(Processing):
         if self.results.get("info").get("category") != "file":
             log.debug("IRMA supports only file scanning !")
             return {}
-
         self.url = self.options.get("url")
         self.timeout = int(self.options.get("timeout", 60))
         self.scan = int(self.options.get("scan", 0))
@@ -145,5 +144,4 @@ class Irma(Processing):
             if result["name"] == "PE Static Analyzer":
                 log.debug("Ignoring PE results at index {0}".format(idx))
                 results["probe_results"][idx]["results"] = "... scrapped ..."
-
         return results
