@@ -18,7 +18,7 @@
 
 ##### Move the code on to your system
 ```bash 
-    git clone ssh://git@127.0.0.1:2222/sparkits/phoenix.git /opt/phoenix
+    git clone https://github.com/SparkITSolutions/cuckoo.git /opt/phoenix
 ```
 
 ##### Copy over your openvpn profiles
