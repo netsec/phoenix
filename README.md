@@ -162,6 +162,8 @@ cuckooweb is running
 cuckooapi is running
 ```
 
+##### You should be able to login as your django admin user on `https://your.cuckoo.host` to setup users and groups
+
 
 ### GOTCHAS:
 * Sometimes there are install issues if your system already has the yara python package installed.
