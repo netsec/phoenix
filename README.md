@@ -182,9 +182,9 @@ cuckooapi is running
 
 ## About Cuckoo
 
-![Cuckoo](http://cuckoosandbox.org/assets/images/cuckoo-white.png)
+![Cuckoo](http://cuckoo.sh/_static/cuckoo.png)
 
-In three words, [Cuckoo Sandbox](https://cuckoo.sh/_static/cuckoo.png) is a malware analysis system.
+In three words, [Cuckoo Sandbox](http://www.cuckoosandbox.org) is a malware analysis system.
 
 What does that mean? It simply means that you can throw any suspicious file at it and in a matter of seconds Cuckoo will provide you back some detailed results outlining what such file did when executed inside an isolated environment.
 
