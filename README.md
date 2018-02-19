@@ -90,7 +90,7 @@ This is the user which will create and manage trust groups within Phoenix Web UI
 #### `ubuntu_install.sh` will exit now but a few steps remain
 
 #### Setup your cuckoo guest
-##### **This is better off done on another machine and simply having vbox files imported
+##### **This is better done on another machine and simply having vbox files imported
 #TODO Add support for deploying pre saved vbox images
 
 ##### 12. Setup and take a clean snapshot of your VMs so cuckoo can interact
@@ -104,6 +104,11 @@ vboxmanage modifyvm win7-x86-0 --vrdeport 3389
 vboxheadless -v on -e authType=NULL -s win7-x86-0
 ```
 You can now RDP to 127.0.0.1:3389 on your Phoenix system to configure the guest OS
+
+Something like this would forward that locally to you
+```bash
+ssh -fnNL 3389:127.0.0.1:3389 user@phoenix
+```
 
 #### Setup your VM from the guest, with python agent and office, etc.
 ##### 13. Once done, take your clean snapshot and you're ready for cuckoo
