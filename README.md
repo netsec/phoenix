@@ -75,10 +75,10 @@ Enter cuckoo user password when prompted
 
 
 ##### 10. Setup your moloch install
-* Type in vboxnet0 for your vmnetwork
-* No don't install ES
-* Type in your docker ES address (default http://172.18.1.253:9200)
-* Type in a long nonsense password
+* Type in `vboxnet0` for your vmnetwork (configurable in `ubuntu_install.sh` pre install)
+* Type `No` don't install ES
+* Type in your `docker Elasticsearch address` (default http://172.18.1.253:9200)
+* Type in a `longNonsensePassword`
 
 ##### OVAs get installed now.
 
