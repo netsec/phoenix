@@ -180,7 +180,7 @@ cuckooapi is running
 ###### We would like to see these changes forked back to the main branch and will be working with the Cuckoo developers to merge our changes
 
 
-## About ![Cuckoo](http://cuckoo.sh/docs/_static/cuckoo.png)
+# About ![Cuckoo](http://cuckoo.sh/docs/_static/cuckoo.png)
 
 In three words, [Cuckoo Sandbox](http://www.cuckoosandbox.org) is a malware analysis system.
 
