@@ -16,19 +16,19 @@
 * yara
 
 
-##### Move the code on to your system
+##### 1. Move the code on to your system
 ```bash 
     git clone https://github.com/SparkITSolutions/cuckoo.git /opt/phoenix
 ```
 
-##### Copy over your openvpn profiles
+##### 2. Copy over your openvpn profiles
 Make sure you can login to your openvpn nodes from the command line with the configs before installing them with phoenix.  The configs will end up in /etc/openvpn/ on the installed system.
 ```bash
 scp user@host:~/install/openvpn/* /opt/phoenix/install/openvpn/
 ```
 
 
-##### Copy VirtualBox OVA files
+##### 3. Copy VirtualBox OVA files
 By default the `install/ubuntu_install.sh` file will take OVA files which have been dropped in the install/virtualbox folder and install them.  
 ```bash
 scp user@host:~/*.ova /opt/phoenix/install/virtualbox/
@@ -42,23 +42,23 @@ If you already have VMs setup you can import them by copying the entire folder o
 vboxmanage registervm /full/path/to/vm.box
 ```
 
-#### Stop and edit install/ubuntu_install.sh lines 70 - 100
+#### 4. Stop and edit install/ubuntu_install.sh lines 70 - 100
 ###### That's where all your DB, username and password configuration info lives for the install
 ```bash
 vim /opt/phoenix/install/ubuntu_install.sh +70
 ```
 
-##### Jump to your install dir
+##### 5. Jump to your install dir
 ```bash
 cd /opt/phoenix/install
 ```
 
-##### Start your install
+##### 6. Start your install
 ```bash
 bash ubuntu_install.sh
 ```
 
-##### Accept default for iptables (we're going to configure that later)
+##### 7. Accept default for iptables (we're going to configure that later)
 ![iptablesv4](./install/screencaps/iptables4.png "iptablesv4")
 ![iptablesv6](./install/screencaps/iptables6.png "iptablesv6")
 
@@ -67,33 +67,33 @@ bash ubuntu_install.sh
 ##### Installs take time
 Get a coffee, this takes a bit (3-5 min)
 
-##### Accept VirtualBox EULA
+##### 8. Accept VirtualBox EULA
 ![vboxlicense](./install/screencaps/vboxlic.png "vboxlicense")
 
-##### Setup cuckoo OS user
+##### 9. Setup cuckoo OS user
 Enter cuckoo user password when prompted
 
 
-##### Setup your moloch install
-* Type in vboxnet0 for your vmnetwork
-* No don't install ES
-* Type in your docker ES address (default http://172.18.1.253:9200)
-* Type in a long nonsense password
+##### 10. Setup your moloch install
+* Type in `vboxnet0` for your vmnetwork (configurable in `ubuntu_install.sh` pre install)
+* Type `No` don't install ES
+* Type in your `docker Elasticsearch address` (default `http://172.18.1.253:9200`)
+* Type in a `longNonsensePassword123`
 
 ##### OVAs get installed now.
 
 VirtualBox OVA copy and import takes time.  Get more coffee...
 
-##### Fill in django admin credentials
-This is the user which will create and manage trust groups within Phoenix
+##### 11. Fill in django admin credentials
+This is the user which will create and manage trust groups within Phoenix Web UI
 
-## `ubuntu_install.sh` will exit now but a few steps remain
+##### `ubuntu_install.sh` will exit now but a few steps remain
 
-### Setup your cuckoo guest
-#### **This is better off done on another machine and simply having vbox files imported
+#### Setup your cuckoo guest
+##### **This is better done on another machine and simply having vbox files imported
 #TODO Add support for deploying pre saved vbox images
 
-##### Setup and take a clean snapshot of your VMs so cuckoo can interact
+##### 12. Setup and take a clean snapshot of your VMs so cuckoo can interact
 ###### Startup your VM
 
 ```bash
@@ -105,14 +105,19 @@ vboxheadless -v on -e authType=NULL -s win7-x86-0
 ```
 You can now RDP to 127.0.0.1:3389 on your Phoenix system to configure the guest OS
 
-### Setup your VM from the guest, with python agent and office, etc.
-##### Once done, take your clean snapshot and you're ready for cuckoo
+Something like this would forward that locally to you
+```bash
+ssh -fnNL 3389:127.0.0.1:3389 user@phoenix
+```
+
+#### Setup your VM from the guest, with python agent and office, etc.
+##### 13. Once done, take your clean snapshot and you're ready for cuckoo
 ```bash
 vboxmanage snapshot win7-x86-0 take clean
 ```
 
 
-### Restart everything
+#### 14. Restart everything
 ```bash
 /opt/phoenix/utils/crontab/root/cuckoo_full_restart.sh
 ```
@@ -143,7 +148,7 @@ Starting cuckooapi:
 Starting api.py:
 ```
 
-#### Check things
+#### 15. Check things
 ```
 /etc/init.d/cuckoo_all status
 ```
@@ -157,12 +162,14 @@ cuckooweb is running
 cuckooapi is running
 ```
 
+##### You should be able to login as your django admin user on `https://your.cuckoo.host` to setup users and groups
+
 
 ### GOTCHAS:
 * Sometimes there are install issues if your system already has the yara python package installed.
   * This package from the requirements.txt should get you a functioning version for cuckoo: `yara-python==3.7.0`
 * If you have imported your VMs already, remember to edit `conf/virtualbox.conf` before bouncing services
-* If you run the install again, it will clobber the `conf/virtualbox.conf`, you'll need to set it up again
+* If you run the install again, it will clobber the `conf/virtualbox.conf`, you'll need to set it up again #TODO - fix that
 
 ### See Phoenix in action
 
@@ -170,9 +177,9 @@ cuckooapi is running
 
 [Phoenix Presentation](https://docs.google.com/presentation/d/1Esvck465UX2REGijGnZtS6_GugstS5NIJC2uvO2g0C0/edit?usp=sharing)
 
-## About Cuckoo
+###### We would like to see these changes forked back to the main branch and will be working with the Cuckoo developers to merge our changes
 
-![Cuckoo](http://cuckoosandbox.org/graphic/cuckoo.png)
+![Cuckoo](http://cuckoo.sh/docs/_static/cuckoo.png)
 
 In three words, [Cuckoo Sandbox](http://www.cuckoosandbox.org) is a malware analysis system.
 
