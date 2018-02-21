@@ -91,30 +91,20 @@ def index(request):
                    ended=mongo_obj["info"]["ended"], id=mongo_obj["info"]["id"])
         if 'behavior' in mongo_obj:
             new["processes"] = mongo_obj["behavior"]["processes"]
-        myhttps = []
+        myhttp = []
         if ('network' in mongo_obj) and ('https_ex' in mongo_obj["network"]):
-            for mht in mongo_obj["network"]["https_ex"]:
+            for mht in list(mongo_obj["network"]["https_ex"]+mongo_obj["network"]["http_ex"])[:4]:
                 if mht["host"] not in domains:
                     full_url = mht["protocol"] + '://' + mht["host"] + '/' + mht["uri"]
                     # TODO: Fix Bluecoat
                     # mycat = bluecoat_sitereview(full_url)
                     mht["full_url"] = full_url
                     # mht["category"] = mycat
-                    myhttps.append(mht)
-        myhttp = []
-        if ('network' in mongo_obj) and ('http_ex' in mongo_obj["network"]):
-            for mh in mongo_obj["network"]["http_ex"]:
-                if mh["host"] not in domains:
-                    full_url = mh["protocol"] + '://' + mh["host"] + '/' + mh["uri"]
-                    # TODO: Fix Bluecoat
-                    # mycat = bluecoat_sitereview(full_url)
-                    mh["full_url"] = full_url
-                    # mh["category"] = mycat
-                    myhttp.append(mh)
-        if myhttps:
-            new["https"] = myhttps
+                    myhttp.append(mht)
+
         if myhttp:
             new["http"] = myhttp
+
         filename = os.path.basename(mongo_obj["target"]["file"]["name"]) if category == "file" else "N/A"
         new.update({"filename": filename})
         analyses_files.append(new)

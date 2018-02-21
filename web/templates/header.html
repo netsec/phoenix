@@ -43,10 +43,10 @@
                     </li>
                     <li><a href="{% url "analysis.views.pending" %}"><span class="glyphicon glyphicon-time"></span>
                         Pending</a></li>
-                    {% if user.username == "jb" or user.username == "greg" %}
+{% comment %}                    {% if user.username == "jb" or user.username == "greg" %}
                         <li><a href="{% url "analysis.views.search" %}"><span class="glyphicon glyphicon-search"></span>
                             Search</a></li>
-                    {% endif %}
+                    {% endif %}{% endcomment %}
                     <li><a href="{% url "advanced_search.views.index" %}"><span
                             class="glyphicon glyphicon-search"></span> Advanced Search</a></li>
                     <li><a href="{% url "submission.views.index" %}"><span class="glyphicon glyphicon-upload"></span>

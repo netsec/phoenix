@@ -83,11 +83,11 @@
                         <td>
                             {% for myurl in analysis.https %}
                             <span class="mono"><a target="_blank" href="{% url "analysis.views.moloch" src_ip=myurl.src src_port=myurl.sport dst_ip=myurl.dst dst_port=myurl.dport %}">{{myurl.full_url}} ({{myurl.mycat}})</a></span><br/>
-                            <span class="mono">{{myurl.request}}</span><br/>
+                            <span class="mono">{{myurl.request|truncatechars:125}}</span><br/>
                             {% endfor %}
                             {% for myurl in analysis.http %}
                             <span class="mono"><a target="_blank" href="{% url "analysis.views.moloch" src_ip=myurl.src src_port=myurl.sport dst_ip=myurl.dst dst_port=myurl.dport %}">{{myurl.full_url}} ({{myurl.mycat}})</a></span><br/>
-                            <span class="mono">{{myurl.request}}</span><br/>
+                            <span class="mono">{{myurl.request|truncatechars:125}}</span><br/>
                             {% endfor %}
                         </td>
                     </tr>

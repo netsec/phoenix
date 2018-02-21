@@ -6,6 +6,7 @@
 import os
 import logging
 import time
+from shutil import copyfile
 
 from lib.cuckoo.common.abstracts import Processing
 from lib.cuckoo.common.config import Config
@@ -1020,10 +1021,15 @@ class Memory(Processing):
         @return: volatility results dict.
         """
         self.key = "memory"
+        self.voptions = Config("memory")
 
         results = {}
         if HAVE_VOLATILITY:
             if self.memory_path and os.path.exists(self.memory_path):
+                if self.voptions.basic.memdump_tmp:
+                    memtmp_path = os.path.join(self.voptions.basic.memdump_tmp, str(self.task["id"])+".dmp")
+                    copyfile(self.memory_path, memtmp_path)
+                    self.memory_path = memtmp_path
                 try:
                     results = VolatilityManager(self.memory_path).run()
                 except Exception:

@@ -31,7 +31,7 @@ from web.tlp_methods import get_tlp_users, create_tlp_query
 
 sys.path.insert(0, settings.CUCKOO_PATH)
 
-from lib.cuckoo.core.database import Database, TASK_PENDING, TASK_COMPLETED
+from lib.cuckoo.core.database import Database, TASK_PENDING, TASK_COMPLETED, TASK_REPORTED
 from lib.cuckoo.common.utils import store_temp_file, versiontuple
 from lib.cuckoo.common.constants import CUCKOO_ROOT, LATEST_HTTPREPLAY
 from lib.tldr.tldr import run_tldr
@@ -61,9 +61,9 @@ def getMongoObj(taskid):
 def index(request):
     db = Database()
     # TODO: add stuff for when user is not logged in
-    tasks_files = db.list_tasks(limit=50, category="file", not_status=TASK_PENDING, tlpuser=request.user.username,
+    tasks_files = db.list_tasks(limit=50, category="file", status=TASK_REPORTED, tlpuser=request.user.username,
                                 tlpamberusers=get_tlp_users(request.user))
-    tasks_urls = db.list_tasks(limit=50, category="url", not_status=TASK_PENDING, tlpuser=request.user.username,
+    tasks_urls = db.list_tasks(limit=50, category="url", status=TASK_REPORTED, tlpuser=request.user.username,
                                tlpamberusers=get_tlp_users(request.user))
     es = settings.ELASTIC
     yara_query = create_tlp_query(request.user, {"term": {"_type": "yara"}})
@@ -84,7 +84,7 @@ def index(request):
                     new["processes"] = m["behavior"]["processes"]
                 myhttp = []
                 if ('network' in m) and ('https_ex' in m["network"]):
-                    for mht in m["network"]["https_ex"]:
+                    for mht in list(m["network"]["https_ex"] + m["network"]["http_ex"])[:4]:
                         if mht["host"] not in domains:
                             full_url = mht["protocol"] + '://' + mht["host"] + '/' + mht["uri"]
                             # TODO: Fix Bluecoat
@@ -93,15 +93,15 @@ def index(request):
                             # mht["category"] = mycat
                             myhttp.append(mht)
 
-                if ('network' in m) and ('http_ex' in m["network"]):
-                    for mh in m["network"]["http_ex"]:
-                        if mh["host"] not in domains:
-                            full_url = mh["protocol"] + '://' + mh["host"] + '/' + mh["uri"]
-                            # TODO: Fix Bluecoat
-                            # mycat = bluecoat_sitereview(full_url)
-                            mh["full_url"] = full_url
-                            # mh["category"] = mycat
-                            myhttp.append(mh)
+                # if ('network' in m) and ('http_ex' in m["network"]):
+                #     for mh in m["network"]["http_ex"]:
+                #         if mh["host"] not in domains:
+                #             full_url = mh["protocol"] + '://' + mh["host"] + '/' + mh["uri"]
+                #             # TODO: Fix Bluecoat
+                #             # mycat = bluecoat_sitereview(full_url)
+                #             mh["full_url"] = full_url
+                #             # mh["category"] = mycat
+                #             myhttp.append(mh)
 
                 if myhttp:
                     new["http"] = myhttp
