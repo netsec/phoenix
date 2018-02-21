@@ -103,15 +103,12 @@ OPENVPN="/etc/openvpn"
 CUCKOODIR=".."
 #I know this is greasy, but requires no interaction
 MOLOCHS2SPW=$(date|sha256sum|awk '{ print $1 }')
-# Ensure this is big enough for memdumps of all your VMs at the same time.
-# If you have 2 x 4GB vms, this must be at least 8GB ...  but hey, RAM is cheap right?
-#CUCKOOMEMORYSIZE="8192M"
-#CUCKOOMEMORY="$CUCKOODIR/storage/memory"
+
 ## If you have a big data slice, put your storage mount in there
-CUCKOOSTORAGE="/storage"
-if [ -n "$CUCKOOSTORAGE" ]; then
-    mv "$CUCKOODIR/storage/*" "$CUCKOOSTORAGE/" && rmdir "$CUCKOODIR/storage"  && ln -s "$CUCKOOSTORAGE" "$CUCKOODIR/storage" && chown -R $CUCKOO_USER.$CUCKOO_USER "$CUCKOOSTORAGE" "$CUCKOODIR/storage"
-fi
+#CUCKOOSTORAGE="/storage"
+#if [ -n "$CUCKOOSTORAGE" ]; then
+#    mv "$CUCKOODIR/storage/*" "$CUCKOOSTORAGE/" && rmdir "$CUCKOODIR/storage"  && ln -s "$CUCKOOSTORAGE" "$CUCKOODIR/storage" && chown -R $CUCKOO_USER.$CUCKOO_USER "$CUCKOOSTORAGE" "$CUCKOODIR/storage"
+#fi
 
 ### EDIT PAST THIS AT YOUR PERIL
 
