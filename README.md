@@ -73,8 +73,10 @@ Get a coffee, this takes a bit (3-5 min)
 ##### 9. Setup cuckoo OS user
 Enter cuckoo user password when prompted
 
+##### 10. Set up TLS Certificate
+Enter certificate details when prompted 
 
-##### 10. Setup your moloch install
+##### 11. Setup your moloch install
 * Type in `vboxnet0` for your vmnetwork (configurable in `ubuntu_install.sh` pre install)
 * Type `No` don't install ES
 * Type in your `docker Elasticsearch address` (default `http://172.18.1.253:9200`)
@@ -84,7 +86,7 @@ Enter cuckoo user password when prompted
 
 VirtualBox OVA copy and import takes time.  Get more coffee...
 
-##### 11. Fill in django admin credentials
+##### 12. Fill in django admin credentials
 This is the user which will create and manage trust groups within Phoenix Web UI
 
 ##### `ubuntu_install.sh` will exit now but a few steps remain
@@ -93,7 +95,7 @@ This is the user which will create and manage trust groups within Phoenix Web UI
 ##### **This is better done on another machine and simply having vbox files imported
 #TODO Add support for deploying pre saved vbox images
 
-##### 12. Setup and take a clean snapshot of your VMs so cuckoo can interact
+##### 13. Setup and take a clean snapshot of your VMs so cuckoo can interact
 ###### Startup your VM
 
 ```bash
@@ -111,13 +113,13 @@ ssh -fnNL 3389:127.0.0.1:3389 user@phoenix
 ```
 
 #### Setup your VM from the guest, with python agent and office, etc.
-##### 13. Once done, take your clean snapshot and you're ready for cuckoo
+##### 14. Once done, take your clean snapshot and you're ready for cuckoo
 ```bash
 vboxmanage snapshot win7-x86-0 take clean
 ```
 
 
-#### 14. Restart everything
+#### 15. Restart everything
 ```bash
 /opt/phoenix/utils/crontab/root/cuckoo_full_restart.sh
 ```
@@ -148,7 +150,7 @@ Starting cuckooapi:
 Starting api.py:
 ```
 
-#### 15. Check things
+#### 16. Check things
 ```
 /etc/init.d/cuckoo_all status
 ```
