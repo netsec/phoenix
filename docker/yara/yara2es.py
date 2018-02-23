@@ -5,6 +5,7 @@ import multiprocessing
 import os, sys
 
 import yara
+import traceback
 from elasticsearch import Elasticsearch
 from pymongo import MongoClient
 my_es = ""
@@ -83,14 +84,20 @@ def scan_files(rules_path, folder_paths_file):
     for path in paths:
         anal_id = path.split('/')[-2]
         if path.endswith('/binary'):
-            fname = os.readlink(path)
-            rules.match(fname, callback=lambda rule_data: ruleCallback(rule_data, fname, anal_id))
+            try:
+                fname = os.readlink(path)
+                rules.match(fname, callback=lambda rule_data: ruleCallback(rule_data, fname, anal_id))
+            except Exception as e:
+                print traceback.print_exc()
         else:
             for root, directories, files in os.walk(path, followlinks=True):
                 for analysis_file in files:
                     filename = os.path.join(root, analysis_file)
                     #print filename
-                    rules.match(filename, callback=lambda rule_data: ruleCallback(rule_data, filename, anal_id))
+                    try:
+                        rules.match(filename, callback=lambda rule_data: ruleCallback(rule_data, filename, anal_id))
+                    except Exception as e:
+                        print traceback.print_exc()
             # analysis_files.append(filename)
 
     # p = multiprocessing.Pool(12)

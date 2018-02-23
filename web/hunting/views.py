@@ -94,8 +94,8 @@ def submit(request):
         analyses_numbers = get_analyses_numbers_matching_tlp(username, usersInGroup)
 
         # analyses = results_db.analysis.find({}, {"info.id": "1"})
-        hunting_prefix = os.path.join(analyses_prefix, ".hunting/")
-        hunting_uuid = os.path.join(hunting_prefix, strUuid)
+        hunting_uuid = os.path.join(analyses_prefix, ".hunting", strUuid)
+
         os.makedirs(hunting_uuid)
 
         #       Workaround for TLP
