@@ -1,6 +1,7 @@
 # Phoenix Cuckoo
 #### Installing the Phoenix version of Cuckoo
-#### Read this all the way through before installing
+#### Read this all the way through before
+#### Consider this a 'quickstart' guide, as there are dozens of ways to deploy and configure Cuckoo/Phoenix
 #### This readme will walk you through installing the main components required by Phoenix Cuckoo to operate:
 
 * cuckoo
@@ -168,10 +169,20 @@ cuckooapi is running
 
 
 ### GOTCHAS:
+* This is meant to act as a guide to install cuckoo components.  There might be bugs based on the OS you're installing, and dozens of other variables.  If there are, please let us know.  This was tested on Ubuntu 16.04 non-HWE.
 * Sometimes there are install issues if your system already has the yara python package installed.
   * This package from the requirements.txt should get you a functioning version for cuckoo: `yara-python==3.7.0`
 * If you have imported your VMs already, remember to edit `conf/virtualbox.conf` before bouncing services
 * If you run the install again, it will clobber the `conf/virtualbox.conf`, you'll need to set it up again #TODO - fix that
+* If there are issues on install regarding the django setup, it's probably because there were issues connecting to your VPNs, and VPN connectivity is required to start the cuckoo web interface.  If this happens, fix your openvpn config and then re run these 2 commands:
+  * python ../web/manage.py migrate
+  * python ../web/manage.py createsuperuser
+
+### Pro Tips:
+* If you port forward to port 19999 on this system, you have netdata installed so you can start playing around with finding bottlenecks and monitoring health
+* There are some additional configurations you can enable to make cuckoo use other (larger/faster) mounts if you have those on your systems.  Read through the comments in ubuntu_installer.sh
+* For now, iptables logs aren't being routed anywhere by rsyslog.conf, so you can find them in /var/log/syslog
+* To update the code from github, simply run update_cuckoo.sh from the root of your cuckoo folder (in our example /opt/phoenix).  *** We recommend you backup before you run this ***
 
 ### See Phoenix in action
 

@@ -177,7 +177,8 @@ if [ -z $(iptables -nL|grep 'IPTABLES-INPUT-CHAIN') ]; then
 service netfilter-persistent start
 iptables -I INPUT -i vboxnet0 -p tcp -m state --state NEW -m tcp --dport 2042 -j ACCEPT
 iptables -I INPUT -s 127.0.0.1 -d 127.0.0.1 -p tcp -m state --state NEW -m tcp --dport 8090 -j ACCEPT
-iptables -I INPUT -s 127.0.0.1 -d 127.0.0.1 -p tcp -m state --state NEW -m tcp --dport 8000 -j ACCEPT
+iptables -I INPUT -s 127.0.0.1 -d 127.0.0.1 -p tcp -m state --state NEW -m tcp --dport 8000 -j
+iptables -I INPUT -i lo -j ACCEPT
 iptables -I INPUT -p tcp -m state --state NEW -m tcp --dport 8005 -j ACCEPT
 iptables -I INPUT -p tcp -m state --state NEW -m tcp --dport 22 -j ACCEPT
 iptables -I INPUT -p tcp -m state --state NEW -m tcp --dport 80 -j ACCEPT
@@ -301,6 +302,7 @@ fi
 
 echo "Adding init.d scripts to start cuckoo at system start"
 cp init.d/* /etc/init.d/
+chmod +x /etc/init.d/cuckoo*
 
 
 # Download and install moloch
@@ -419,7 +421,7 @@ sleep 30
 #TODO remove /etc/init.d/functions from init.d scripts
 touch /etc/init.d/functions
 echo "Starting cuckooRooter"
-service cuckoorooter start
+/etc/init.d/cuckoorooter start
 sleep 10
 
 
@@ -433,7 +435,7 @@ python ../utils/community.py -waf
 echo "Done!"
 
 echo "Update cuckoo web db"
-service cuckoorooter restart
+/etc/init.d/cuckoorooter restart
 python ../web/manage.py migrate
 
 #TODO how can this be checked?
