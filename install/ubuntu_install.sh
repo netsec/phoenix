@@ -194,12 +194,11 @@ for i in 9200 9300 3306 27017; do
 done
 done
 ## Only allow your docker bridge interfaces to hit the DBs
-ls /sys/class/net/|grep br-|while read brint; do
-    iptables -I FORWARD ! -i $brint -p tcp -m tcp --dport 3306 -j DROP
-    iptables -I FORWARD ! -i $brint -p tcp -m tcp --dport 9200 -j DROP
-    iptables -I FORWARD ! -i $brint -p tcp -m tcp --dport 9300 -j DROP
-    iptables -I FORWARD ! -i $brint -p tcp -m tcp --dport 27017 -j DROP
-done
+iptables -I FORWARD ! -s $DOCKER_MONGO_NET -p tcp -m tcp --dport 3306 -j DROP
+iptables -I FORWARD ! -s $DOCKER_MONGO_NET -p tcp -m tcp --dport 9200 -j DROP
+iptables -I FORWARD ! -s $DOCKER_MONGO_NET -p tcp -m tcp --dport 9300 -j DROP
+iptables -I FORWARD ! -s $DOCKER_MONGO_NET -p tcp -m tcp --dport 27017 -j DROP
+
 iptables -I FORWARD -m limit --limit 1/sec -j LOG --log-prefix "IPTABLES-FORWARD-CHAIN-TOP|" --log-level 7
 iptables -A FORWARD -m limit --limit 1/sec -j LOG --log-prefix "IPTABLES-FORWARD-CHAIN-DROPPED|" --log-level 7
 iptables -A FORWARD -j DROP

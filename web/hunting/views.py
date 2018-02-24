@@ -147,10 +147,9 @@ def kick_off_suricata(analyses_numbers, client, hunting_uuid, strUuid, suriRuleF
                               mem_limit='2g',
                               stderr=True,
                               labels={'uuid': strUuid},
-                              network="docker_phoenix"
-                              # ,
-                              # remove=True)
-                              )
+                              network="docker_phoenix",
+                              remove=True)
+
 
 
 def kick_off_yara(analyses_numbers, client, hunting_uuid, strUuid, yaraRuleFile, tlp, username):
@@ -219,7 +218,8 @@ def kick_off_yara(analyses_numbers, client, hunting_uuid, strUuid, yaraRuleFile,
                                            labels={'uuid': strUuid},
                                            volumes=volumes,
                                            network="docker_phoenix",
-                                           detach=True)
+                                           detach=True,
+                                           remove=True)
 
 
 def get_yara_paths(hunting_uuid):

@@ -588,7 +588,7 @@ class Pcap(object):
         @param conn: connection dict.
         @param data: raw data.
         """
-        if conn["dst"] in self.smtp_flow:
+        if conn["dst"] in self.smtp_flow and 'STARTTLS' not in data:
             self.smtp_flow[conn["dst"]] += data
         else:
             self.smtp_flow[conn["dst"]] = data
