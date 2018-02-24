@@ -179,6 +179,7 @@ cuckooapi is running
   * python ../web/manage.py createsuperuser
 
 ### Pro Tips:
+* We haven't seen any issues using chrome, so I'd advise using that browser with Cuckoo/Phoenix
 * If you port forward to port 19999 on this system, you have netdata installed so you can start playing around with finding bottlenecks and monitoring health
 * There are some additional configurations you can enable to make cuckoo use other (larger/faster) mounts if you have those on your systems.  Read through the comments in ubuntu_installer.sh
 * For now, iptables logs aren't being routed anywhere by rsyslog.conf, so you can find them in /var/log/syslog
