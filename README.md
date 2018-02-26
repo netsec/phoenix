@@ -1,5 +1,11 @@
 # Phoenix Cuckoo
-#### Installing the Phoenix version of Cuckoo
+### See Phoenix in action
+
+Take a look at Phoenix in our recent presentation at ACoD in Austin
+
+[Phoenix Presentation](https://docs.google.com/presentation/d/1Esvck465UX2REGijGnZtS6_GugstS5NIJC2uvO2g0C0/edit?usp=sharing)
+
+### Installing the Phoenix version of Cuckoo
 #### Read this all the way through before
 #### Consider this a 'quickstart' guide, as there are dozens of ways to deploy and configure Cuckoo/Phoenix
 #### This readme will walk you through installing the main components required by Phoenix Cuckoo to operate:
@@ -185,12 +191,6 @@ cuckooapi is running
 * There are some additional configurations you can enable to make cuckoo use other (larger/faster) mounts if you have those on your systems.  Read through the comments in ubuntu_installer.sh
 * For now, iptables logs aren't being routed anywhere by rsyslog.conf, so you can find them in /var/log/syslog
 * To update the code from github, simply run update_cuckoo.sh from the root of your cuckoo folder (in our example /opt/phoenix).  *** We recommend you backup before you run this ***
-
-### See Phoenix in action
-
-#### Take a look at Phoenix in our recent presentation at ACoD in Austin
-
-[Phoenix Presentation](https://docs.google.com/presentation/d/1Esvck465UX2REGijGnZtS6_GugstS5NIJC2uvO2g0C0/edit?usp=sharing)
 
 ###### We would like to see these changes forked back to the main branch and will be working with the Cuckoo developers to merge our changes
 
