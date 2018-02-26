@@ -139,7 +139,7 @@ class Pcap(object):
 
         return True
 
-    def _is_whitelisted(self, conn, hostname):
+    def d_is_whitelisted(self, conn, hostname):
         """Checks if whitelisting conditions are met"""
         # is whitelistng enabled ?
         if not self.whitelist_enabled:

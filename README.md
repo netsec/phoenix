@@ -170,6 +170,7 @@ cuckooapi is running
 
 ### GOTCHAS:
 * This is meant to act as a guide to install cuckoo components.  There might be bugs based on the OS you're installing, and dozens of other variables.  If there are, please let us know.  This was tested on Ubuntu 16.04 non-HWE.
+* New users need to be added to both the django web interface (https://phoenix-host/admin) and the moloch interface (https://phoenix-host:8005/users) and they must be the same name (though passwords can and should differ).  In moloch, the moloch username and password are used for authentication, but the django database is used for authorization (that's where the TLP resides)
 * Sometimes there are install issues if your system already has the yara python package installed.
   * This package from the requirements.txt should get you a functioning version for cuckoo: `yara-python==3.7.0`
 * If you have imported your VMs already, remember to edit `conf/virtualbox.conf` before bouncing services

@@ -8,6 +8,8 @@ from elasticsearch import Elasticsearch
 from pymongo import MongoClient
 from django.conf import settings
 from web.tlp_methods import get_tlp_users,get_analyses_numbers_matching_tlp
+from lib.cuckoo.common.whitelist import is_whitelisted_domain, is_whitelisted_url
+
 
 today = datetime.date.today()
 now = today.strftime('%Y%m%d')
@@ -26,19 +28,13 @@ def getList(ifile):
         content = [x.strip() for x in content]
         return content
 
-
-crls = getList("crls")
-sengines = getList("search")
-prefix = getList("prefix")
+##TODO move this to a config item for a file within the whitelist folder
 cliIgnore = getList("cli")
 
 
-def memPrune(obj):
-    return obj not in crls + sengines
-
-def httpPrune(obj):
+def is_dmn_in_url_whitelisted(obj):
     dmn = obj.split("://")[1].split("/")[0]
-    if dmn not in prefix:
+    if is_whitelisted_domain(dmn):
         return True
 
 
@@ -145,34 +141,46 @@ def run_tldr(myid, user, clionly):
                     output["File"]["AV_Hits"][vscan] = doc["virustotal"]["scans"][vscan]["result"]
         if 'behavior' in doc:
             for cli in doc["behavior"]["processes"]:
+                ####TODO populate this with command lines to ignore from summary
                 if cli not in cliIgnore:
                     output["File"]["Command_Lines"].append(cli["command_line"])
         if 'procmemory' in doc:
             for pm in doc["procmemory"]:
                 ntw_mem = pm["urls"]
                 for ntw_mem_hit in ntw_mem:
-                    if memPrune(ntw_mem_hit) and (ntw_mem_hit not in httpMemList):
+                    if not is_whitelisted_url(ntw_mem_hit) and (ntw_mem_hit not in httpMemList):
                         httpMemList.append(ntw_mem_hit)
                 output["URL_in_memory"] = httpMemList
         if 'network' in doc:
             for httphit in doc["network"]["http"]:
                 # print httphit
                 uri = httphit["uri"]
-                if httpPrune(str(uri)) and uri not in httpList:
+                if not is_dmn_in_url_whitelisted(str(uri)) and uri not in httpList:
                     httpList.append(uri)
-            output["HTTP"] = httpList
-            for httpshit in doc["network"]["https_ex"]:
+            output["HTTP_URLs"] = httpList
+            if doc["network"]["https_ex"]:
                 output["HTTPS"] = []
-                httpsobj = {"host": httpshit["host"], "http_method": httpshit["method"],
-                            "response": httpshit["response"],
-                            "response_md5": httpshit["md5"], "dst": httpshit["dst"], "uri": httpshit["uri"],
-                            "raw_request": httpshit["request"]}
-                output["HTTPS"].append(httpsobj)
+                for httpshit in doc["network"]["https_ex"]:
+                    if not is_whitelisted_domain(httpshit["host"]):
+                        httpsobj = {"host": httpshit["host"], "http_method": httpshit["method"],
+                                "response": httpshit["response"],
+                                "response_md5": httpshit["md5"], "dst": httpshit["dst"], "uri": httpshit["uri"],
+                                "raw_request": httpshit["request"]}
+                        output["HTTPS"].append(httpsobj)
+            if doc["network"]["http_ex"]:
+                output["HTTP"] = []
+                for httphit in doc["network"]["http_ex"]:
+                    if not is_whitelisted_domain(httphit["host"]):
+                        httpobj = {"host": httphit["host"], "http_method": httphit["method"],
+                                "response": httphit["response"],
+                                "response_md5": httphit["md5"], "dst": httphit["dst"], "uri": httphit["uri"],
+                                "raw_request": httphit["request"]}
+                        output["HTTP"].append(httpobj)
 
         if 'dns' in doc["network"]:
             output["DNS"] = []
             for dns in doc["network"]["dns"]:
-                if dns["request"] not in prefix:
+                if not is_whitelisted_domain(dns["request"]):
                     dnobj = dict(domain=dns["request"], answers=dns["answers"])
                     output["DNS"].append(dnobj)
 
@@ -182,6 +190,7 @@ def run_tldr(myid, user, clionly):
                 dmd5 = drophit["md5"]
                 MD5Dropped(dmd5, "Dropped_files", drophit, True)
                 MD5Https(dmd5, "Dropped_files", drophit, True)
+                ##TODO - modify query to exclude itself when looking for 'dropped in other samples'
                 MD5Https(dmd5, "Dropped_In_Other_Samples", drophit, False)
     # outJson = json.dumps(output)
     # pretty

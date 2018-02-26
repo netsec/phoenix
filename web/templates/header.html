@@ -13,13 +13,13 @@
     <link href="{% static "css/style.css" %}" rel="stylesheet">
     <link href="{% static "css/lightbox.css" %}" rel="stylesheet">
     <link href="{% static "css/query-builder.default.min.css" %}" rel="stylesheet">
-    <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.16/css/jquery.dataTables.css">
+    <link href="{% static "css/jquery.dataTables.css" %}" rel="stylesheet">
     <script src="{% static "js/jquery.js" %}"></script>
     <script src="{% static "js/query-builder.standalone.min.js" %}"></script>
 
-    <script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.16/js/jquery.dataTables.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.8.4/moment.min.js"></script>
-    <script src="https://cdn.datatables.net/plug-ins/1.10.16/sorting/datetime-moment.js"></script>
+    <script src="{% static "js/jquery.dataTables.js" %}"></script>
+    <script src="{% static "js/moment.min.js" %}"></script>
+    <script src="{% static "js/datetime-moment.js" %}"></script>
 </head>
 <body>
 <header>
