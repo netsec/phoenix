@@ -1,5 +1,11 @@
 # Phoenix Cuckoo
-#### Installing the Phoenix version of Cuckoo
+### See Phoenix in action
+
+Take a look at Phoenix in our recent presentation at ACoD in Austin
+
+[Phoenix Presentation](https://docs.google.com/presentation/d/1Esvck465UX2REGijGnZtS6_GugstS5NIJC2uvO2g0C0/edit?usp=sharing)
+
+### Installing the Phoenix version of Cuckoo
 #### Read this all the way through before
 #### Consider this a 'quickstart' guide, as there are dozens of ways to deploy and configure Cuckoo/Phoenix
 #### This readme will walk you through installing the main components required by Phoenix Cuckoo to operate:
@@ -170,6 +176,7 @@ cuckooapi is running
 
 ### GOTCHAS:
 * This is meant to act as a guide to install cuckoo components.  There might be bugs based on the OS you're installing, and dozens of other variables.  If there are, please let us know.  This was tested on Ubuntu 16.04 non-HWE.
+* New users need to be added to both the django web interface (https://phoenix-host/admin) and the moloch interface (https://phoenix-host:8005/users) and they must be the same name (though passwords can and should differ).  In moloch, the moloch username and password are used for authentication, but the django database is used for authorization (that's where the TLP resides)
 * Sometimes there are install issues if your system already has the yara python package installed.
   * This package from the requirements.txt should get you a functioning version for cuckoo: `yara-python==3.7.0`
 * If you have imported your VMs already, remember to edit `conf/virtualbox.conf` before bouncing services
@@ -184,12 +191,6 @@ cuckooapi is running
 * There are some additional configurations you can enable to make cuckoo use other (larger/faster) mounts if you have those on your systems.  Read through the comments in ubuntu_installer.sh
 * For now, iptables logs aren't being routed anywhere by rsyslog.conf, so you can find them in /var/log/syslog
 * To update the code from github, simply run update_cuckoo.sh from the root of your cuckoo folder (in our example /opt/phoenix).  *** We recommend you backup before you run this ***
-
-### See Phoenix in action
-
-#### Take a look at Phoenix in our recent presentation at ACoD in Austin
-
-[Phoenix Presentation](https://docs.google.com/presentation/d/1Esvck465UX2REGijGnZtS6_GugstS5NIJC2uvO2g0C0/edit?usp=sharing)
 
 ###### We would like to see these changes forked back to the main branch and will be working with the Cuckoo developers to merge our changes
 

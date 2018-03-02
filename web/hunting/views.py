@@ -233,8 +233,7 @@ def get_yara_paths(hunting_uuid):
 
 @login_required
 def yara_file(request, hunt_uuid):
-    hunting_prefix = analyses_prefix + ".hunting/"
-    hunting_uuid = hunting_prefix + hunt_uuid
+    hunting_uuid = os.path.join(analyses_prefix, ".hunting",hunt_uuid)
     yara_malware_folder, yara_root_folder, yara_rule_file_path, yara_rules_folder, yara_target_files = get_yara_paths(
         hunting_uuid)
     with open(yara_rule_file_path, 'rb') as f:

@@ -114,3 +114,10 @@ pastebin.com
 www.iptrackeronline.com
 iplogger.com
 yourjavascript.com
+ocsp.godaddy.com.akadns.net
+ocsp-ds.ws.symantec.com.edgekey.net
+sf.symcd.com
+vassg142.ocsp.omniroot.com
+sr.symcd.com
+ocsp.starfieldtech.com
+ocsp.msocsp.com

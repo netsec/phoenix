@@ -3,10 +3,13 @@
 {% block content %}
 <script type="text/javascript">
     $(document).ready( function () {
-    $('#file_table').DataTable();
-    $('#url_table').DataTable();
-    $('#yara_table').DataTable();
-    $('#suricata_table').DataTable();
+        var sortObj = {
+        "order":[[0,"desc"]]
+    };
+    $('#file_table').DataTable(sortObj);
+    $('#url_table').DataTable(sortObj);
+    $('#yara_table').DataTable(sortObj);
+    $('#suricata_table').DataTable(sortObj);
 } );
 </script>
 <ul class="nav nav-tabs">

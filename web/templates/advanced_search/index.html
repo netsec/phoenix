@@ -5,7 +5,10 @@
     <script type="text/javascript">
         $(document).ready(function () {
             $.fn.dataTable.moment('MMM. D, YYYY, H:mm a');
-            $('#file_table').DataTable();
+            var sortObj = {
+                "order": [[0, "desc"]]
+            };
+            $('#file_table').DataTable(sortObj);
             $.getJSON("{% static 'fields.json'%}", function (data) {
                 fields = [];
                 for (index in data) {
