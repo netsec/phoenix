@@ -22,6 +22,7 @@ MarkupSafe==0.23
 MySQL-python==1.2.5
 ndg-httpsclient==0.4.0
 oletools==0.42
+pathos==0.2.1
 peepdf==0.3.2
 pefile2==1.2.11
 pyasn1==0.1.8

@@ -6,6 +6,7 @@
 import os
 import logging
 import time
+from pathos.multiprocessing import Pool
 from shutil import copyfile
 
 from lib.cuckoo.common.abstracts import Processing
@@ -939,6 +940,9 @@ class VolatilityManager(object):
         """Get the OS profile"""
         return VolatilityAPI(self.memfile).imageinfo()["data"][0]["osprofile"]
 
+    def vol_runner(self, func, func_name):
+        return dict(name=func_name, output=func())
+
     def run(self):
         results = {}
 
@@ -947,7 +951,8 @@ class VolatilityManager(object):
             return
 
         vol = VolatilityAPI(self.memfile, self.osprofile)
-
+        funcs = []
+        pool = Pool()
         for plugin_name in self.PLUGINS:
             if isinstance(plugin_name, list):
                 plugin_name, profiles = plugin_name[0], plugin_name[1:]
@@ -971,12 +976,20 @@ class VolatilityManager(object):
 
             if plugin_name in vol.plugins:
                 log.debug("Executing volatility '%s' module.", plugin_name)
-                results[plugin_name] = getattr(vol, plugin_name)()
+                funcs.append(dict(name=plugin_name, ret=pool.apply_async(getattr(vol,plugin_name))))
+
+        for func in funcs:
+            results[func["name"]] = func["ret"].get()
+
+        pool.close()
+        pool.join()
 
         self.find_taint(results)
         self.cleanup()
 
         return self.mask_filter(results)
+
+
 
     def mask_filter(self, old):
         """Filter out masked stuff. Keep tainted stuff."""
