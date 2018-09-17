@@ -1,0 +1,34 @@
+{
+  "template":   "apache2-*",
+  "settings": { "number_of_shards": 1 , "number_of_replicas":0},
+  "mappings": {
+    "_default_": {
+
+      "_all": {
+        "enabled": false
+      },
+      "properties" : {
+      "Timestamp" : {
+         "type" : "date",
+         "format" : "yyyyMMdd'_'HHmmss"
+          }},
+      "dynamic_templates": [
+        {
+          "strings": {
+            "match_mapping_type": "string",
+            "mapping": {
+              "type": "text",
+              "fields": {
+                "raw": {
+                  "type":  "keyword",
+                  "ignore_above": 256
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+

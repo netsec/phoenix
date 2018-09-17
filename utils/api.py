@@ -123,6 +123,8 @@ def tasks_create_url():
     tags = request.form.get("tags", None)
     custom = request.form.get("custom", "")
     owner = request.form.get("owner", "")
+    tlp = request.form.get("tlp", "")
+
 
     memory = request.form.get("memory", False)
     if memory:
@@ -143,6 +145,7 @@ def tasks_create_url():
         machine=machine,
         platform=platform,
         tags=tags,
+        tlp=tlp,
         custom=custom,
         owner=owner,
         memory=memory,
@@ -597,7 +600,7 @@ def vpn_status():
 def get_analyses_numbers_for_tlp(username):
     print "called with " + username
     try:
-        analyses_nums = get_analyses_numbers_matching_tlp(username, list(set(db.get_analysis_numbers_for_tlp(username)+[username])))
+        analyses_nums = get_analyses_numbers_matching_tlp(username, list(set(db.get_groups_for_tlp(username)+[username])))
         forced_expr = "(tags == [" + ",".join(["cuckoo:" + analyses_num for analyses_num in analyses_nums]) + "])"
         ## To ignore whitelisted domains leave line below uncommented
         forced_expr += " && (ip.dst != [10.200.0.255,224.0.0.252,239.255.255.250]) && (host != [" + ",".join(

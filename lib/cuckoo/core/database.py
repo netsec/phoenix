@@ -1453,7 +1453,7 @@ class Database(object):
         finally:
             session.close()
 
-    def get_analysis_numbers_for_tlp(self, username):
+    def get_groups_for_tlp(self, username):
         try:
             session = self.Session()
             params = {"user": username}

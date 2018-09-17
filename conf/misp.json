@@ -1,0 +1,16 @@
+{
+        "purge" : {
+                "values" : [".gvt1.com/edgedl/release", "GoogleUpdateSetup.exe?cms"],
+                "comments" : [".gvt1.com/edgedl/release", "GoogleUpdateSetup.exe?cms"]
+                },
+        "add_tags" : {
+                "values" : [
+                        {"regex" : "extractorexpress.exe", "tags" : ["3","8"], "name": "Emotet"},
+                        {"regex" : "faultserif.exe", "tags" : ["3","8"], "name": "Emotet" }
+                        ],
+                "comments" : [
+                        {"regex" : "extractorexpress.exe", "tags" : ["3","8"], "name": "Emotet"},
+                        {"regex" : "faultserif.exe", "tags" : ["3","8"], "name": "Emotet" }
+                        ]
+                }
+}

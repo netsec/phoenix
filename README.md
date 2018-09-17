@@ -1,196 +1,208 @@
-# Phoenix Cuckoo
-### See Phoenix in action
+# Phoenix Malware Analysis Appliance
+##### We are eager to work with any Colleges and Universities to help implement Phoenix into their curriculum, especially as it pertains to creating and testing countermeasures.
+##### If Phoenix helps you win and save money, consider donating to our beer & gear fund: 3N8fx47jEKQ6WUUXeziPrS7d1SpWbj954g
 
-Take a look at Phoenix in our recent presentation at ACoD in Austin
+---
+#### Start generating, and sharing, your own Threat Data and Controls today!
 
-[Phoenix Presentation](https://docs.google.com/presentation/d/1Esvck465UX2REGijGnZtS6_GugstS5NIJC2uvO2g0C0/edit?usp=sharing)
+![misp_viz](./install/screencaps/misp_viz.png)
 
-### Installing the Phoenix version of Cuckoo
-#### Read this all the way through before
-#### Consider this a 'quickstart' guide, as there are dozens of ways to deploy and configure Cuckoo/Phoenix
-#### This readme will walk you through installing the main components required by Phoenix Cuckoo to operate:
+##### Want to know if your production IPS and Yara rules will help mitigate that nasty Word doc going around?  Just submit it to Phoenix and know if you have coverage, or if you need to create a  countermeasure.
 
-* cuckoo
-* docker
-* django admin
-* elasticsearch
-* openvpn
-* moloch
-* mongodb
-* mysql
-* suricata
-* virtualbox
-* yara
+![recents](./install/screencaps/recents.png)
 
+##### See an interesting report online with a list of hashes?  Have a ReversingLabs API key, or a VT key?  Want to see how your controls would measure up?  Paste your key and your hash list into Phoenix and start detonating malware en masse.
 
-##### 1. Move the code on to your system
-```bash 
-    git clone https://github.com/SparkITSolutions/cuckoo.git /opt/phoenix
-```
+![submit](./install/screencaps/submit.png)
 
-##### 2. Copy over your openvpn profiles
-Make sure you can login to your openvpn nodes from the command line with the configs before installing them with phoenix.  The configs will end up in /etc/openvpn/ on the installed system.
+##### Have multiple teams working multiple incidents?  Phoenix was built with trust groups and basic TLP as its foundation for authorization.
+###### TLP Green - Anyone with a valid Phoenix account can view or hunt against the data
+###### TLP Amber - Only members of your groups can view or hunt using the data
+###### TLP Red - Only you can view or hunt against the data
+
+### Preparing VMs for Phoenix
+
+If you already run Cuckoo on machinery other than VirtualBox then you can ignore the next instructions and just copy and paste your current configs once the easy-button has finished.  
+Those of you already running Cuckoo deployments on VirtualBox have an easy migration path.  Tar up your VirtualBox machine directories and import them as a tarball with the easy-button.  
+Doing this will preserve your snapshots, so you shouldn't need much (if any) configuration to migrate from your existing Cuckoo deployment to Phoenix.
+To export your VMs in a way that the easy-button knows how to import, su to your VirtualBox user, run the following commands, and put the output .tar.gz file in ./install/virtualbox/:
 ```bash
-scp user@host:~/install/openvpn/* /opt/phoenix/install/openvpn/
+	VBOXDIR=$(vboxmanage list systemproperties|grep "Default machine folder:"|awk -F 'Default machine folder:' '{print $2}'|sed -e 's/^          //g')
+	cd "$VBOXDIR/../"
+	tar -cpzf "$HOME/$(echo $VBOXDIR|awk -F '/' '{print $NF}'|sed 's/ //g').tar.gz" "$(echo $VBOXDIR|awk -F '/' '{print $NF}')"
 ```
+### Installing the Phoenix appliance
+##### Consider the easy-button a 'quickstart' guide, as there are dozens of ways to deploy and configure Cuckoo/Phoenix.
+##### A typical build with the VM installation and all configuration takes around an hour, but once you start the easy-button there is no interaction, so be sure your variables are correct in `./install/ubuntu_install.sh` before running it.
+##### The easy-button was designed to perform the following on a baremetal, clean install of Ubuntu 16.04
+
+* update_packages
+* setup_rsyslog
+* tune_mongo
+* install_docker
+* configure_es
+* import_kibana
+* setup_iptables
+* import_grafana
+* setup_virtualbox
+* setup_rclocal
+* add_cuckoo_user
+* setup_fail2ban
+* setup_certificates
+* setup_apache2
+* setup_cuckoo_daemons
+* setup_moloch
+* install_vms
+* setup_crontab
+* setup_openvpn
+* configure_cuckoo
+* setup_tcpdump
+* configure_hunt_containers
+* setup_netdata
 
 
-##### 3. Copy VirtualBox OVA files
-By default the `install/ubuntu_install.sh` file will take OVA files which have been dropped in the install/virtualbox folder and install them.  
-```bash
-scp user@host:~/*.ova /opt/phoenix/install/virtualbox/
-```
-
-#### OR
-
-##### Import existing vms with snapshots
-If you already have VMs setup you can import them by copying the entire folder over to your cuckoo user's virtualbox folder (typically `/home/cuckoo/VirtualBox\ VMs/`)and running 
-```bash
-vboxmanage registervm /full/path/to/vm.box
-```
-
-#### 4. Stop and edit install/ubuntu_install.sh lines 70 - 100
-###### That's where all your DB, username and password configuration info lives for the install
-```bash
-vim /opt/phoenix/install/ubuntu_install.sh +70
-```
-
-##### 5. Jump to your install dir
-```bash
-cd /opt/phoenix/install
-```
-
-##### 6. Start your install
-```bash
-bash ubuntu_install.sh
-```
-
-##### 7. Accept default for iptables (we're going to configure that later)
-![iptablesv4](./install/screencaps/iptables4.png "iptablesv4")
-![iptablesv6](./install/screencaps/iptables6.png "iptablesv6")
-
-
-
-##### Installs take time
-Get a coffee, this takes a bit (3-5 min)
-
-##### 8. Accept VirtualBox EULA
-![vboxlicense](./install/screencaps/vboxlic.png "vboxlicense")
-
-##### 9. Setup cuckoo OS user
-Enter cuckoo user password when prompted
-
-##### 10. Set up TLS Certificate
-Enter certificate details when prompted 
-
-##### 11. Setup your moloch install
-* Type in `vboxnet0` for your vmnetwork (configurable in `ubuntu_install.sh` pre install)
-* Type `No` don't install ES
-* Type in your `docker Elasticsearch address` (default `http://172.18.1.253:9200`)
-* Type in a `longNonsensePassword123`
-
-##### OVAs get installed now.
-
-VirtualBox OVA copy and import takes time.  Get more coffee...
-
-##### 12. Fill in django admin credentials
-This is the user which will create and manage trust groups within Phoenix Web UI
-
-##### `ubuntu_install.sh` will exit now but a few steps remain
-
-#### Setup your cuckoo guest
-##### **This is better done on another machine and simply having vbox files imported
-#TODO Add support for deploying pre saved vbox images
-
-##### 13. Setup and take a clean snapshot of your VMs so cuckoo can interact
-###### Startup your VM
+### Building Phoenix
+##### In our environment, we use a larger spinning RAID 5 mount (/data) and an SSD mount (/ssd).  Keep this in mind when setting up the installer script.
+### *Make sure you change the variables (like usernames and passwords) in ubuntu_installer.sh before you build.*
+##### Our automated Phoenix build script looks like this:
 
 ```bash
-su - cuckoo
-vboxmanage modifyvm win7-x86-0 --vrde on
-vboxmanage modifyvm win7-x86-0 --vrdeaddress 127.0.0.1
-vboxmanage modifyvm win7-x86-0 --vrdeport 3389
-vboxheadless -v on -e authType=NULL -s win7-x86-0
-```
-You can now RDP to 127.0.0.1:3389 on your Phoenix system to configure the guest OS
-
-Something like this would forward that locally to you
-```bash
-ssh -fnNL 3389:127.0.0.1:3389 user@phoenix
-```
-
-#### Setup your VM from the guest, with python agent and office, etc.
-##### 14. Once done, take your clean snapshot and you're ready for cuckoo
-```bash
-vboxmanage snapshot win7-x86-0 take clean
-```
-
-
-#### 15. Restart everything
-```bash
-/opt/phoenix/utils/crontab/root/cuckoo_full_restart.sh
-```
-
-#### It should look something like this
-
-```
-Stopping cuckoorooter:
-Shutting down rooter.py: Stopping cuckoop:
-Shutting down process.py:
-Stopping cuckood:
-Shutting down cuckoo.py:
-Stopping cuckooweb:
-Shutting down manage.py:
-Stopping cuckooapi:
-Shutting down api.py:
-[ ok ] Stopping openvpn (via systemctl): openvpn.service.
-[ ok ] Restarting fail2ban (via systemctl): fail2ban.service.
-[ ok ] Starting openvpn (via systemctl): openvpn.service.
-Starting cuckoorooter:
-Starting rooter.py: Starting cuckoop:
-Starting process.py:
-Starting cuckood:
-Starting cuckoo.py:
-Starting cuckooweb:
-Starting manage.py:
-Starting cuckooapi:
-Starting api.py:
+	#!/bin/bash
+	CUCKOO_USER="cuckoo"
+	echo "Cloning phoenix"
+	git clone https://github.com/SparkITSolutions/cuckoo.git /opt/phoenix
+	## We used to import ova files, but then you have to setup snapshots.  We're lazy... 
+	## You can still have the easy-button import your OVAs, but then you'll have to do stuff like this later to setup snapshots:
+	##
+	## su - cuckoo
+	## vboxmanage modifyvm win7-x86-0 --vrde on
+	## vboxmanage modifyvm win7-x86-0 --vrdeaddress 127.0.0.1
+	## vboxmanage modifyvm win7-x86-0 --vrdeport 3389
+	## vboxheadless -v on -e authType=NULL -s $$VMNAME
+	##
+	#cp /data/staging/vms/*.ova /opt/phoenix/install/virtualbox/
+	echo "Copying staging VMs"
+	cp /data/staging/VirtualBoxVMs.gz /opt/phoenix/install/virtualbox/
+	echo "Copying openvpn files"
+	cp /data/staging/openvpn/* /opt/phoenix/install/openvpn/
+	cd /opt/phoenix/install
+	echo "Installing phoenix"
+	## This is where the magic happens...
+	bash ubuntu_install.sh
+	## Copy the virtualbox config from your existing Cuckoo deployment into Phoenix
+	cp /data/staging/virtualbox.conf /opt/phoenix/conf/
+	chown $CUCKOO_USER.$CUCKOO_USER /opt/phoenix/conf/*
+	## Restart all of your newly installed Cuckoo services
+	/opt/phoenix/utils/crontab/root/cuckoo_full_restart.sh
+	## Go get your miscreant punch on!!!
 ```
 
-#### 16. Check things
+#### By installing using the easy-button, you receive the following services, which you'll need to setup dns/hosts file entries for:
+* https://$PHOENIX_HOSTNAME - Django Phoenix interface
+* https://netdata.$PHOENIX_HOSTNAME - Netdata performance monitoring
+
+![netdata](./install/screencaps/netdata.png)
+
+* https://grafana.$PHOENIX_HOSTNAME - Mongodb and Elasticsearch health and performance dashboards
+
+![grafana_es](./install/screencaps/grafana_es.png)
+
+![grafana_mongo](./install/screencaps/grafana_mongo.png)
+
+* https://kibana.$PHOENIX_HOSTNAME - Kibana dashboards and logging with the following indexed logs: linux-*, iptables-*, docker-*, cuckoo-*, apache2-*, fail2ban-*, mongo_stats-*, sessions-*
+
+![kibana_iptables](./install/screencaps/kibana_iptables.png)
+
+![kibana_web_all](./install/screencaps/kibana_web_all.png)
+
+![kibana_web_errors](./install/screencaps/kibana_web_errors.png)
+
+![kibana_web_normal](./install/screencaps/kibana_web_normal.png)
+
+* https://moloch.$PHOENIX_HOSTNAME - Local Moloch instance
+
+![moloch](./install/screencaps/moloch.png)
+
+* https://misp.$PHOENIX_HOSTNAME - Local MISP instance
+
+
+### Post easy-button configuration
+
+##### Login to https://misp.$PHOENIX_HOSTNAME and change the default username/password (admin@admin.test/admin).  
+
+![Setup_MISP1](./install/screencaps/misp1.png)
+
+![Setup_MISP2](./install/screencaps/misp2.png)
+
+##### Click on `Admin` in the top right corner.  The API key will need to be copied from here and added to `/opt/phoenix/conf/reporting.conf` under the `[z_misp]` heading.
+
+![Setup_MISP3](./install/screencaps/misp3.png)
+
+![Setup_MISP4](./install/screencaps/misp4.png)
+
+##### Click on `Global Actions` -> `List Object Templates`, then select `Update Objects`
+
+![Setup_MISP5](./install/screencaps/misp5.png)
+
+##### Click on `Administration` -> `Server Settings & Maintenance`, then click on `MISP Settings`.  The only actual option that needs to be change is `live`, but we recommend going through all of the red and yellow MISP values and setting them appropriately.
+
+![Setup_MISP6](./install/screencaps/misp6.png)
+
+![Setup_MISP7](./install/screencaps/misp7.png)
+
+##### In order to do any reasonable amount of samples, we'll want to disable the MISP correlation.  This 'feature' renders MISP largely useless if left enabled.  Set `MISP.completely_disable_correlation` to `true`.
+
+![Setup_MISP8](./install/screencaps/correlation.png)
+
+###### *Double click MISP option values to set.*
+
+##### Once you've finished setting up MISP, we need to do a full cuckoo restart
+
 ```
-/etc/init.d/cuckoo_all status
+    /opt/phoenix/utils/crontab/root/cuckoo_full_restart.sh
 ```
 
-##### If all went well you should see this
+##### Now that MISP is configured, navigate to https://$PHOENIX_HOSTNAME/admin as the admin user and setup some groups.  Let's start with `SecOps` and `CyberIntel`. For any and all groups you create within Phoenix's Django interface, leave all of the permissions the way they are (empty).
+
+![Create_Groups1](./install/screencaps/1.png "create_groups1")
+
+![Create_Groups3](./install/screencaps/3.png "create_groups3")
+
+![Create_Groups4](./install/screencaps/4.png "create_groups4")
+
+![Create_Groups5](./install/screencaps/5.png "create_groups5")
+
+![Create_Groups6](./install/screencaps/6.png "create_groups6")
+
+##### Now that we have trust groups setup, it's time to add some users.
 ```
-cuckoorooter is running
-cuckoop is running
-cuckood is running
-cuckooweb is running
-cuckooapi is running
+python /opt/phoenix/utils/setup_user.py -h 2>/dev/null
+usage: setup_user.py [-h] [-e EMAIL] [-g GROUPS]
+
+Phoenix user add script
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -e EMAIL, --email EMAIL
+                        Email to add
+  -g GROUPS, --groups GROUPS
+                        Groups to add the email to - comma separated
 ```
-
-##### You should be able to login as your django admin user on `https://your.cuckoo.host` to setup users and groups
-
-
-### GOTCHAS:
-* This is meant to act as a guide to install cuckoo components.  There might be bugs based on the OS you're installing, and dozens of other variables.  If there are, please let us know.  This was tested on Ubuntu 16.04 non-HWE.
-* New users need to be added to both the django web interface (https://phoenix-host/admin) and the moloch interface (https://phoenix-host:8005/users) and they must be the same name (though passwords can and should differ).  In moloch, the moloch username and password are used for authentication, but the django database is used for authorization (that's where the TLP resides)
-* Sometimes there are install issues if your system already has the yara python package installed.
-  * This package from the requirements.txt should get you a functioning version for cuckoo: `yara-python==3.7.0`
-* If you have imported your VMs already, remember to edit `conf/virtualbox.conf` before bouncing services
-* If you run the install again, it will clobber the `conf/virtualbox.conf`, you'll need to set it up again #TODO - fix that
-* If there are issues on install regarding the django setup, it's probably because there were issues connecting to your VPNs, and VPN connectivity is required to start the cuckoo web interface.  If this happens, fix your openvpn config and then re run these 2 commands:
-  * python ../web/manage.py migrate
-  * python ../web/manage.py createsuperuser
+```
+python /opt/phoenix/utils/setup_user.py -e JoeBlow@yourdomain.com -g "SecOps,CyberIntel"
+```
+##### Now that you have users and groups setup, you can start submitting files, and enjoying your Phoenix install
+##### To programmatically submit files from [Reversing Labs](https://www.reversinglabs.com) or [Virus Total](https://virustotal.com) take a look at `/opt/phoenix/utils/auto_submit.py`
 
 ### Pro Tips:
 * We haven't seen any issues using chrome, so I'd advise using that browser with Cuckoo/Phoenix
-* If you port forward to port 19999 on this system, you have netdata installed so you can start playing around with finding bottlenecks and monitoring health
 * There are some additional configurations you can enable to make cuckoo use other (larger/faster) mounts if you have those on your systems.  Read through the comments in ubuntu_installer.sh
-* For now, iptables logs aren't being routed anywhere by rsyslog.conf, so you can find them in /var/log/syslog
-* To update the code from github, simply run update_cuckoo.sh from the root of your cuckoo folder (in our example /opt/phoenix).  *** We recommend you backup before you run this ***
+* To update the code from github, simply run update_cuckoo.sh from the root of your cuckoo folder (in our example /opt/phoenix).  
+*** We recommend you backup before you run this ***
+
+Take a look at Phoenix in our presentation at ACoD in Austin.
+
+[Phoenix Presentation](https://docs.google.com/presentation/d/1Esvck465UX2REGijGnZtS6_GugstS5NIJC2uvO2g0C0/edit?usp=sharing)
 
 ###### We would like to see these changes forked back to the main branch and will be working with the Cuckoo developers to merge our changes
 

@@ -28,7 +28,9 @@
             <p>This {{ analysis.info.category }} is <b>very suspicious</b>, with a score of <strong>{{ analysis.info.score }} out of 10!</strong></p>
         </div>
         {% endif %}
-
+    {%  if  analysis.info.custom %}
+        <p><b>Custom: </b> {{ analysis.info.custom }}</p>
+    {% endif %}
         <p>
             <b>Please notice</b>: The scoring system is currently still in development and should be considered an <b><i>alpha</i></b> feature.
         </p>

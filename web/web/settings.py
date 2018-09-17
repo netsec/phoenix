@@ -48,6 +48,7 @@ else:
 
 MOLOCH_ENABLED = cfg.moloch.get("enabled")
 MOLOCH_HOST = cfg.moloch.get("host")
+MOLOCH_PORT = ''
 MOLOCH_INSECURE = cfg.moloch.get("insecure")
 
 # In case we have VPNs enabled we need to initialize through the following

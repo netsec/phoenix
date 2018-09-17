@@ -35,6 +35,9 @@
                     <th width="100">Status</th>
                     <th>Command Lines</th>
                     <th>Stage 2+ URLs</th>
+                    <th width="70">YARA</th>
+                    <th width="70">Suricata</th>
+                    <th width="150">Tags</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -93,6 +96,33 @@
                             <span class="mono">{{myurl.request|truncatechars:125}}</span><br/>
                             {% endfor %}
                         </td>
+                     <td width="70" align="center">
+                    {% if analysis.yara_matches %}
+                        <a href="{{ analysis.yara_matches.link }}" title="{{ analysis.yara_matches.matches }}"><img width="24" src="{% static "images/green_check.png" %}"></a>
+
+{#                    {% else %}#}
+{#                         <img src="{% static "images/red_cross.png" %}"/>#}
+
+                    {% endif %}
+
+                </td>
+                     <td width="70" align="center">
+                    {% if analysis.suri_matches %}
+                        <a href="{{ analysis.suri_matches.link }}" title="{{ analysis.suri_matches.matches }}"><img width="24" src="{% static "images/green_check.png" %}"></a>
+
+{#                    {% else %}#}
+{#                         <img src="{% static "images/red_cross.png" %}"/>#}
+
+                    {% endif %}
+
+                </td>
+                    <td width="150" align="center">
+                        {% if analysis.tags %}
+                            {% for tag in analysis.tags %}
+                                <a href="{{ tag.tag_link }}" target="_blank">{{ tag.tag_name }}</a><br />
+                            {% endfor %}
+                        {% endif %}
+                    </td>
                     </tr>
                 {% endfor %}
                 </tbody>
@@ -249,6 +279,7 @@
                         </ul>
 
                     </td>
+
                 </tr>
                 {% endfor %}
                 </tbody>

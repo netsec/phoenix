@@ -17,8 +17,17 @@
                         <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Resubmit sample
                     </a>
                     <a class="btn btn-info btn-xs" href="{% url "analysis.views.tldr" analysis.info.id %}" target="_blank">
-                        <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> TLDR
+                        <span class="glyphicon glyphicon-fire"></span> TLDR
                     </a>
+
+                    <a class="btn btn-info btn-xs" href="{% url "analysis.views.misp" analysis.info.id %}"
+                    {% if tlp != "red" %}
+                        target="_blank"
+                       {% endif %}
+                    >
+                        <span class="glyphicon glyphicon-user"></span> MISP
+                    </a>
+
                     </span>
                 {% endif %}
                 </td>

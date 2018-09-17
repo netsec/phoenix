@@ -434,7 +434,7 @@ class Pcap(object):
                 # TODO: add srv handling
                 query["answers"].append(ans)
 
-            if self._is_whitelisted(conn, q_name):
+            if self.d_is_whitelisted(conn, q_name):
                 log.debug("DNS target {0} whitelisted. Skipping ...".format(q_name))
                 self.whitelist_ips = self.whitelist_ips + _ip
                 return True

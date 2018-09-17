@@ -4,6 +4,7 @@
 # See the file 'docs/LICENSE' for copying permission.
 
 import os
+import traceback
 
 import requests
 import sys
@@ -85,6 +86,7 @@ def render_index(request, kwargs={}):
         "vpns": vpns.values(),
         "route": cfg.routing.route,
         "internet": cfg.routing.internet,
+        "nogroups": request.user.groups.exists()
     }
 
     values.update(kwargs)
@@ -149,7 +151,7 @@ def index(request, task_id=None, sha1=None):
             if task_id:
                 task_ids.append(task_id)
 
-    elif request.FILES.getlist("sample") or request.POST["vt_hashes"]:
+    elif request.FILES.getlist("sample") or request.POST["vt_hashes"] or request.POST["rl_hashes"]:
         paths = []
         if request.FILES.getlist("sample"):
             samples = request.FILES.getlist("sample")
@@ -173,7 +175,7 @@ def index(request, task_id=None, sha1=None):
                 # configure it in that way).
                 path = store_temp_file(sample.read(), sample.name)
                 paths.append(path)
-        else:
+        elif request.POST["vt_apikey"]:
             #logger.info(mytime + ' downloading file')
             vt_key = request.POST["vt_apikey"]
             if not vt_key:
@@ -186,12 +188,33 @@ def index(request, task_id=None, sha1=None):
                 response = requests.get(processing_cfg.virustotal.get("downloadurl"), params=params)
                 try:
                     response.raise_for_status()
+                    path = store_temp_file(response.content, vt_hash)
+                    paths.append(path)
                 except requests.HTTPError as e:
-                    return render(request, "error.html", {
-                        "error": "{0}".format(e),
-                    })
-                path = store_temp_file(response.content, vt_hash)
-                paths.append(path)
+                    # return render(request, "error.html", {
+                    #     "error": "{0}".format(e),
+                    # })
+                    traceback.print_exc()
+
+        elif request.POST["rl_token"]:
+            rl_token = request.POST["rl_token"]
+            if not rl_token:
+                return render(request, "error.html",{
+                    "error": "You must supply a ReversingLabs Token."
+                })
+            for rl_hash in request.POST["rl_hashes"].split():
+                response = requests.get("https://a1000.reversinglabs.com/api/samples/"+rl_hash+"/download/", headers={"Authorization":"Token %s" % rl_token})
+                try:
+                    response.raise_for_status()
+                    path = store_temp_file(response.content, rl_hash)
+                    paths.append(path)
+                except requests.HTTPError as e:
+                   traceback.print_exc()
+
+            if not paths:
+                return render(request, "error.html", {
+                    "error": "That hash may not be on ReversingLabs, or something may have gone wrong"
+            })
 
         for path in paths:
             for entry in task_machines:

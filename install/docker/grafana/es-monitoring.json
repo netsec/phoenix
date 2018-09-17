@@ -1,0 +1,22 @@
+{
+	"name": "ES-monitoring",
+	"database": "elasticsearch_metrics-*",
+	"url": "http://172.18.1.253:9200",
+	"basicAuth": false,
+	"jsonData": {
+		"timeField": "@timestamp",
+		"esVersion": 56,
+		"tlsSkipVerify": true,
+		"keepCookies": [],
+		"maxConcurrentShardRequests": 256
+	},
+	"access": "proxy",
+	"readOnly": false,
+	"typeLogoUrl": "public/app/plugins/datasource/elasticsearch/img/elasticsearch.svg",
+	"orgId": 1,
+	"user": "",
+	"password": "",
+	"type": "elasticsearch",
+	"id": 2,
+	"isDefault": false
+}

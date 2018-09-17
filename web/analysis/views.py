@@ -5,7 +5,9 @@
 
 import calendar
 import datetime
+import fnmatch
 import json
+import mimetypes
 import os
 import re
 import sys
@@ -16,7 +18,7 @@ from cStringIO import StringIO
 
 from bson.objectid import ObjectId
 from django.conf import settings
-from django.http import HttpResponse
+from django.http import HttpResponse, StreamingHttpResponse, FileResponse
 from django.contrib.auth.decorators import login_required, user_passes_test
 
 from django.shortcuts import render, redirect
@@ -29,6 +31,8 @@ from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from gridfs import GridFS
 from web.tlp_methods import get_tlp_users, create_tlp_query
 
+from lib.cuckoo.common.config import Config
+
 sys.path.insert(0, settings.CUCKOO_PATH)
 
 from lib.cuckoo.core.database import Database, TASK_PENDING, TASK_COMPLETED, TASK_REPORTED
@@ -39,7 +43,14 @@ import modules.processing.network as network
 from helpers import convert_hit_to_template
 from pymongo import MongoClient
 from elasticsearch import Elasticsearch
+from pymisp import PyMISP
+import urlparse
+import MySQLdb
 
+config = Config("reporting")
+options = config.get("z_misp")
+misp_url = options["url"]
+misp = PyMISP(misp_url, options["apikey"], False)
 
 results_db = settings.MONGO
 fs = GridFS(results_db)
@@ -53,17 +64,21 @@ def getMongoObj(taskid):
     client = settings.MONGO
 
     cursor = client.analysis.find({"info.id": taskid},
-                              {"behavior.processes": "1", "network.http_ex": "1", "network.https_ex": "1"})
+                                  {"behavior.processes": "1", "network.http_ex": "1", "network.https_ex": "1"})
     return cursor
+
 
 @require_safe
 @login_required
 def index(request):
+
     db = Database()
+    misp = PyMISP(misp_url, options["apikey"], False)
+
     # TODO: add stuff for when user is not logged in
-    tasks_files = db.list_tasks(limit=50, category="file", status=TASK_REPORTED, tlpuser=request.user.username,
+    tasks_files = db.list_tasks(limit=500, category="file", status=TASK_REPORTED, tlpuser=request.user.username,
                                 tlpamberusers=get_tlp_users(request.user))
-    tasks_urls = db.list_tasks(limit=50, category="url", status=TASK_REPORTED, tlpuser=request.user.username,
+    tasks_urls = db.list_tasks(limit=500, category="url", status=TASK_REPORTED, tlpuser=request.user.username,
                                tlpamberusers=get_tlp_users(request.user))
     es = settings.ELASTIC
     yara_query = create_tlp_query(request.user, {"term": {"_type": "yara"}})
@@ -75,10 +90,45 @@ def index(request):
     analyses_yhunts = [convert_hit_to_template(c) for c in tasks_yhunts['hits']['hits']]
     analyses_surihunts = [convert_hit_to_template(c) for c in tasks_surihunts['hits']['hits']]
     if tasks_files:
+        misp_tags = check_misp_errors(misp.get_all_tags(), "Can't get tags from MISP")["Tag"]
+        tags_dict = {misp_item["id"]: misp_item for misp_item in misp_tags}
+        mysqldb = MySQLdb.connect(host=options["mysql_host"],
+                             user=options["mysql_user"],
+                             passwd=options["mysql_password"],
+                             db="misp")
+        id_cur = mysqldb.cursor()
+        eventinfos = {"\"Phoenix Sandbox analysis #{0}\"".format(file.id): int(file.id) for file in tasks_files}
+        id_cur.execute('select max(id), info from events where info in ({0}) group by info'.format(",".join(eventinfos.keys())))
+
+        misp_ids = {eventinfos["\"{0}\"".format(id[1])]:int(id[0]) for id in id_cur.fetchall()}
+        event_id_strings = ','.join(str(intid) for intid in misp_ids.keys())
+
+        #misp_ids = ','.join([id[0] for id in id_cur.fetch_all()])
+
+        tag_cur = mysqldb.cursor()
+        tag_cur.execute('select t.name, t.id, et.event_id from event_tags et inner join tags t on et.tag_id = t.id where et.event_id in ({0})'.format(
+            event_id_strings))
+        misp_tags = {}
+        for rows in tag_cur.fetchall():
+            if int(rows[2]) not in misp_tags:
+                misp_tags[int(rows[2])] = []
+            misp_tags[int(rows[2])].append(dict(name=rows[0], id=rows[1]))
+
+        att_cur = mysqldb.cursor()
+        att_cur.execute('select a.value1, a.type, o.event_id from objects o inner join attributes a on o.id = a.object_id where o.template_uuid in ("3c177337-fb80-405a-a6c1-1b2ddea8684a","b5acf82e-ecca-4868-82fe-9dbdf4d808c3") and o.event_id in ({0}) and a.id in (select max(a1.id) from attributes a1 where a1.event_id in ({0}) group by a1.event_id, type);'.format(event_id_strings))
+
+        misp_atts = {}
+        for rows in att_cur.fetchall():
+            if int(rows[2]) not in misp_atts:
+                misp_atts[int(rows[2])] = {}
+            misp_atts[int(rows[2])][rows[1]] = rows[0]
+
+        mysqldb.close()
         for task in tasks_files:
             new = task.to_dict()
             new["sample"] = db.view_sample(new["sample_id"]).to_dict()
-            mobj = getMongoObj(new["id"])
+            analysis_id = new["id"]
+            mobj = getMongoObj(analysis_id)
             for m in mobj:
                 if 'behavior' in m:
                     new["processes"] = m["behavior"]["processes"]
@@ -111,6 +161,55 @@ def index(request):
             if db.view_errors(task.id):
                 new["errors"] = True
 
+
+            # search_result = get_misp_event(analysis_id)
+            if new["id"] in misp_atts:
+            # if search_result:
+            #     misp_index_event = search_result[-1]
+            #     misp_event_id = misp_index_event["id"]
+            #     misp_event = check_misp_errors(misp.get_event(misp_event_id),
+            #                                    "Couldn't search MISP for {0}".format(misp_event_id))
+                misp_att_dict = misp_atts[new["id"]]
+                suri_matches = []
+                has_suri = False
+                yara_matches = []
+                has_yara = False
+                if "yara" in misp_att_dict:
+                    has_yara = True
+                    yara_matches.append(misp_att_dict["yara"])
+                if "snort" in misp_att_dict:
+                    has_suri = True
+                    suri_matches.append(misp_att_dict["snort"])
+                if has_yara:
+                    new.update({
+                        "yara_matches":
+                            {
+                                "link": options["external_url"] + "/events/view/" + str(misp_ids[new["id"]]),
+                                "matches": ",".join(yara_matches)
+                            }
+                    })
+
+                if has_suri:
+                    new.update({
+                        "suri_matches":
+                            {
+                                "link": options["external_url"] + "/events/view/" + str(misp_ids[new["id"]]),
+                                "matches": ",".join(suri_matches)
+                            }
+                    })
+
+                # Tags only show up in "search_index"
+                tags_to_add = []
+                if int(new["id"]) in misp_tags:
+                    for tag in misp_tags[int(new["id"])]:
+                        tag_id = str(tag["id"])
+                        if tag_id not in tags_dict:
+                            continue
+                        tags_to_add.append({
+                            "tag_name": tag["name"],
+                            "tag_link": options["external_url"] + "/events/index/searchtag:{0}".format(tag_id)
+                        })
+                new.update({"tags": tags_to_add})
             analyses_files.append(new)
 
     if tasks_urls:
@@ -122,12 +221,24 @@ def index(request):
 
             analyses_urls.append(new)
     analyses_yhunts.sort(reverse=True)
+
+
     return render(request, "analysis/index.html", {
         "files": analyses_files,
         "urls": analyses_urls,
         "yara_hunts": analyses_yhunts,
         "suri_hunts": analyses_surihunts
     })
+
+
+def get_misp_event(analysis_id):
+    # my_misp = misp_obj if misp_obj else self.misp
+    misp = PyMISP(misp_url, options["apikey"], False)
+    search_result = check_misp_errors(
+        misp.search_index(eventinfo="Phoenix Sandbox analysis #" + str(analysis_id)),
+        "Couldn't search MISP for {0}".format(str(
+            analysis_id)))
+    return search_result["response"] if search_result else None
 
 
 @require_safe
@@ -360,11 +471,11 @@ def report(request, task_id):
     # Is this version of httpreplay deprecated?
     deprecated = httpreplay_version and \
                  versiontuple(httpreplay_version) < versiontuple(LATEST_HTTPREPLAY)
-
     return render(request, "analysis/report.html", {
         "analysis": report,
         "domainlookups": domainlookups,
         "iplookups": iplookups,
+        "tlp": report['info']['tlp'],
         "httpreplay": {
             "have": HAVE_HTTPREPLAY,
             "deprecated": deprecated,
@@ -379,6 +490,24 @@ def report(request, task_id):
 def latest_report(request):
     rep = results_db.analysis.find_one({}, sort=[("_id", pymongo.DESCENDING)])
     return report(request, rep["info"]["id"] if rep else 0)
+
+
+@require_safe
+@login_required
+def idapro(request, analysis_id, pid, num):
+    mem_path = os.path.join(settings.CUCKOO_PATH, "storage/analyses/{0}/memory".format(analysis_id))
+    download_file = os.path.join(mem_path, "{0}-{1}.py.gz").format(pid, num)
+    if os.path.isfile(download_file):
+        filename = os.path.basename(download_file)
+        response = FileResponse(open(download_file, 'rb'), content_type=mimetypes.guess_type(download_file)[0])
+        response['Content-Length'] = os.path.getsize(download_file)
+        response['Content-Disposition'] = "attachment; filename=%s" % filename
+        return response
+
+    else:
+        return render(request, "error.html", {
+            "error": "File not found",
+        })
 
 
 @require_safe
@@ -409,8 +538,37 @@ def file(request, category, object_id):
 @require_safe
 @login_required
 def tldr(request, object_id):
-    outStr = run_tldr(object_id, request.user, False)
+    outStr = run_tldr(object_id, request.user.username, False)
     return HttpResponse(outStr, content_type="application/json")
+
+
+@require_safe
+@login_required
+def misp(request, task_id):
+    report = results_db.analysis.find_one({"info.id": int(task_id)}, sort=[("_id", pymongo.DESCENDING)])
+    if report["info"]["tlp"] == "red":
+        return serve_using_django_in_memory(request, "storage/analyses/{0}/mispreport.json".format(task_id))
+    else:
+        global misp
+        misp = PyMISP(misp_url, options["apikey"], False)
+
+        misp_event = get_misp_event(task_id)
+        if misp_event:
+            return redirect(options["external_url"] + "/events/view/" + misp_event[-1]["id"])
+        else:
+            return HttpResponse("No MISP Report found")
+
+
+def serve_using_django_in_memory(request, filename):
+    file_full_path = os.path.join(settings.CUCKOO_PATH, "{0}".format(filename))
+
+    with open(file_full_path, 'r') as f:
+        data = f.read()
+
+    response = HttpResponse(data, content_type=mimetypes.guess_type(file_full_path)[0])
+    response['Content-Disposition'] = "attachment; filename={0}".format(filename)
+    response['Content-Length'] = os.path.getsize(file_full_path)
+    return response
 
 
 moloch_mapper = {
@@ -447,8 +605,9 @@ def moloch(request, **kwargs):
     else:
         url = "https://"
 
-    url += "%s:8005/?%s" % (
+    url += "%s%s/?%s" % (
         settings.MOLOCH_HOST or hostname,
+        ":"+settings.MOLOCH_PORT if settings.MOLOCH_PORT else "",
         urllib.urlencode({
             "date": "-1",
             "expression": " && ".join(query),
@@ -777,9 +936,9 @@ def import_analysis(request):
             })
 
         # if analysis.size > settings.MAX_UPLOAD_SIZE:
-            # return render(request, "error.html", {
-            #     "error": "You uploaded a file that exceeds that maximum allowed upload size.",
-            # })
+        # return render(request, "error.html", {
+        #     "error": "You uploaded a file that exceeds that maximum allowed upload size.",
+        # })
 
         if not analysis.name.endswith(".zip"):
             return render(request, "error.html", {
@@ -889,3 +1048,9 @@ def reboot_analysis(request, task_id):
         "task_id": task_id,
         "baseurl": request.build_absolute_uri("/")[:-1],
     })
+
+
+def check_misp_errors(response, error_str):
+    if "errors" in response:
+        raise Exception("{0}: {1}".format(error_str,response["errors"][-1]))
+    return response

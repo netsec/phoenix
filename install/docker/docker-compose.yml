@@ -1,6 +1,84 @@
 version: '3'
 services:
-  cuckoo-mongo:
+  #phoenix-cyberchef:
+  #  image: remnux/cyberchef
+  #  networks:
+  #    phoenix:
+  #      ipv4_address: DOCKER_CYBERCHEF_IP
+  #  ports:
+  #    - "8081:80"
+  #  restart: always
+  #  logging:
+  #    driver: syslog
+  #    options:
+  #        syslog-address: "tcp://127.0.0.1:5514"
+  #        syslog-format: rfc3164
+  #        tag: cyberchef
+
+  phoenix-kibana:
+    image: docker.elastic.co/kibana/kibana:5.6.10
+    networks:
+      phoenix:
+        ipv4_address: DOCKER_KIBANA_IP
+    ports:
+      - "5601:5601"
+    restart: always
+    environment:
+      - SERVER_NAME=PHOENIX_HOSTNAME
+      - ELASTICSEARCH_URL=http://DOCKER_ELASTIC_IP:9200
+    logging:
+      driver: syslog
+      options:
+          syslog-address: "tcp://127.0.0.1:5514"
+          syslog-format: rfc3164
+          tag: kibana
+  phoenix-grafana:
+    image: grafana/grafana
+    networks:
+      phoenix:
+        ipv4_address: DOCKER_GRAFANA_IP
+    ports:
+      - "3000:3000"
+    restart: always
+    environment:
+      - GF_SERVER_ROOT_URL=http://PHOENIX_HOSTNAME
+      - GF_SECURITY_ADMIN_PASSWORD=phoenix
+      - GF_AUTH_BASIC_ENABLED=false
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_NAME="Main Org"
+    volumes:
+      - DOCKER_GRAFANA_DIR:/var/lib/grafana
+    logging:
+      driver: syslog
+      options:
+          syslog-address: "tcp://127.0.0.1:5514"
+          syslog-format: rfc3164
+          tag: grafana
+  phoenix-misp:
+    image: harvarditsecurity/misp
+    volumes:
+      - DOCKER_MISP_DIR:/var/lib/mysql
+      - DOCKER_MISP_BACKUP_DIR:/backup
+    networks:
+      phoenix:
+        ipv4_address: DOCKER_MISP_IP
+    ports:
+      - "9443:443"
+      - "9980:80"
+    restart: unless-stopped
+    environment:
+      - MYSQL_MISP_PASSWORD=sdiofj09wej09fwjef9020932j0
+      - MYSQL_ROOT_PASSWORD=soidfjoiasjoiw1980
+      - POSTFIX_RELAY_HOST=DOCKER_POSTFIX_HOST
+      - MISP_FQDN=DOCKER_MISP_FQDN
+      - MISP_EMAIL=DOCKER_MISP_EMAIL
+    logging:
+      driver: syslog
+      options:
+          syslog-address: "tcp://127.0.0.1:5514"
+          syslog-format: rfc3164
+          tag: misp
+  phoenix-mongo:
     image: mongo
     volumes:
       - DOCKER_MONGO_DIR/db:/data/db
@@ -11,21 +89,41 @@ services:
     ports:
       - "27017:27107"
     restart: always
-  cuckoo-elastic:
-    image: docker.elastic.co/elasticsearch/elasticsearch:5.6.6
+    logging:
+      driver: syslog
+      options:
+          syslog-address: "tcp://127.0.0.1:5514"
+          syslog-format: rfc3164
+          tag: mongo
+  phoenix-elastic:
+    image: docker.elastic.co/elasticsearch/elasticsearch:5.6.7
     ports:
       - "9200:9200"
       - "9300:9300"
     volumes:
       - DOCKER_ELASTIC_DIR:/usr/share/elasticsearch/data
+      - DOCKER_ELASTIC_BACKUP_DIR:/es_backup
     environment:
       - "discovery.type=single-node"
+      - "cluster.routing.allocation.enable=all"
       - "xpack.security.enabled=false"
+      - "bootstrap.memory_lock=true"
+      - "ES_JAVA_OPTS=-Xms8192m -Xmx8192m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
     restart: always
     networks:
       phoenix:
         ipv4_address: DOCKER_ELASTIC_IP
-  cuckoo-mysql:
+    logging:
+      driver: syslog
+      options:
+          syslog-address: "tcp://127.0.0.1:5514"
+          syslog-format: rfc3164
+          tag: elastic
+  phoenix-mysql:
     image: mysql:5.7
     ports:
       - "3306:3306"
@@ -40,6 +138,12 @@ services:
       phoenix:
         ipv4_address: DOCKER_MYSQL_IP
     restart: always
+    logging:
+        driver: syslog
+        options:
+            syslog-address: "tcp://127.0.0.1:5514"
+            syslog-format: rfc3164
+            tag: mysql
 networks:
   phoenix:
     driver: bridge
