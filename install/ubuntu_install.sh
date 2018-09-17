@@ -864,6 +864,7 @@ echo "##### Setting up storage #####"
             mv "$CUCKOODIR/storage" "$PHOENIXSTORAGE"
             ln -s "$PHOENIXSTORAGE/storage" "$CUCKOODIR/storage"
             chown -R $CUCKOO_USER.$CUCKOO_USER "$PHOENIXSTORAGE"
+            chown -R $CUCKOO_USER.$CUCKOO_USER "$CUCKOODIR"
     fi
 }
 
