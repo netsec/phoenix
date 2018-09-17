@@ -675,11 +675,10 @@ curl -k https://172.18.1.251:443/users/login > /dev/null
 MISP_COMMAND="update users set authkey='$DOCKER_MISP_API' where id=1;"
 ## MISP API is so slow, we bypass it and go straight to the DB
 MISP_MYSQL_SETUP="GRANT ALL PRIVILEGES on misp.* to '$DOCKER_MISP_MYSQL_USER'@'172.18.1.1'  IDENTIFIED BY '$DOCKER_MISP_MYSQL_PASSWORD';"
-MISP_SED_COMMAND="sed -i 's/127.0.0.1/0.0.0.0/g' /etc/mysql/mariadb.conf.d/50-server.cnf"
 
 docker-compose  -f ../docker/docker-compose.yml exec -T phoenix-misp sh -c "mysql misp -se \"$MISP_COMMAND\""
 docker-compose  -f ../docker/docker-compose.yml exec -T phoenix-misp sh -c "mysql misp -se \"$MISP_MYSQL_SETUP\""
-docker-compose  -f ../docker/docker-compose.yml exec -T phoenix-misp sh -c "$MISP_SED_COMMAND"
+docker-compose  -f ../docker/docker-compose.yml exec -T phoenix-misp sh -c "sed -i 's/127.0.0.1/0.0.0.0/g' /etc/mysql/mariadb.conf.d/50-server.cnf"
 docker-compose -f  ../docker/docker-compose.yml restart phoenix-misp
 }
 
