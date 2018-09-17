@@ -13,7 +13,7 @@ today = now.strftime('%Y-%m-%d')
 mytime = rnow.strftime('%Y-%m-%d %H:%M:%s')
 storagedir = "/data/malicious_files"
 token = ''
-owner = phoenix@phoenix.beastmode.tools
+owner = 'phoenix@phoenix.beastmode.tools'
 import os, random, requests
 
 
