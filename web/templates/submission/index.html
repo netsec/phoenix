@@ -58,6 +58,7 @@ $(document).ready( function() {
                 <ul class="nav nav-tabs">
                     <li class="active"><a href="#file" data-toggle="tab"><span class="glyphicon glyphicon-file"></span> File</a></li>
                     <li><a href="#url" data-toggle="tab"><span class="glyphicon glyphicon-globe"></span> URL</a></li>
+                    <li><a href="#rl" data-toggle="tab"><span class="glyphicon glyphicon-download"></span> ReversingLabs</a></li>
                     <li><a href="#vt" data-toggle="tab"><span class="glyphicon glyphicon-download"></span> Virustotal Hash</a></li>
                 </ul>
                 {% endif %}
@@ -92,6 +93,15 @@ $(document).ready( function() {
                         <div style="width: 100%;" class="input-group">
                             <label class="sr-only" for="form_url">URL</label>
                             <input type="text" class="form-control" id="form_url" name="url" placeholder="URL" {% if url %} value="{{url}}" {% endif %} />
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="rl">
+                     <div style="width: 100%;" class="input-group">
+                         <label class="sr-only" for="rl_token">ReversingLabs Token</label>
+                         <input type="text" class="form-control" id="rl_token" name="rl_token" placeholder="RL Token" />
+                         <br/>
+                         <label class="sr-only" for="rl_hashes">ReversingLabs Hashes</label>
+                         <textarea class="form-control" rows="4" id="rl_hashes" name="rl_hashes" placeholder="Hashes (whitespace separated)"></textarea>
                         </div>
                     </div>
                     <div class="tab-pane fade" id="vt">
@@ -201,12 +211,13 @@ $(document).ready( function() {
                                 <table>
                                     <tr>
                                         <td rowspan="3">Traffic Light</td>
-                                        <td><input type="radio" name="tlp" value="green">Green - Anyone with an
+                                        <td><input type="radio" name="tlp" checked="checked" value="green">Green - Anyone with an
                                             Account</input></td>
                                     </tr>
                                     <tr>
-                                        <td><input type="radio" name="tlp" value="amber" checked="checked">Amber -
-                                            Only in your groups</input></td>
+                                        <td><input type="radio" name="tlp" value="amber"
+                                                {% if user.nogroups %} disabled="disabled" {% endif %}>
+                                            Amber - Only in your groups</input></td>
                                     </tr>
                                     <tr>
                                         <td><input type="radio" name="tlp" value="red">Red - Private Submission</input>

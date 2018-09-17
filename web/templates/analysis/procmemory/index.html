@@ -12,7 +12,7 @@
                     <ul>
                     {% for extracted in proc.extracted %}
                         {% if extracted.extracted_id %}
-                        <li><a href="{% url "analysis.views.file" "procmem_extracted" extracted.extracted_id %}" class="btn btn-primary btn-small">Download</a></li>
+                        <li><a href="{% url "analysis.views.file" "procmem_extracted" extracted.extracted_id %}" class="btn btn-primary btn-small">Download</a> - <a href="{% url "analysis.views.idapro" analysis.info.id proc.pid proc.num %}" class="btn btn-primary btn-small">Download IDA Pro Files</a></li>
                         {% endif %}
                     {% endfor %}
                 </ul>

@@ -1,0 +1,3 @@
+rule=: %sev:char-sep: % [%failrule:char-sep:]%] %action:char-sep: % %ip:ipv4%
+rule=: %sev:char-sep: % [%failrule:char-sep:]%] %ip:ipv4% %action:rest%
+rule=: %sev:char-sep: % [%failrule:char-sep:]%] %action:char-sep: % %ip:ipv4% by ip

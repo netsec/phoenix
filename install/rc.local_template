@@ -3,4 +3,5 @@ su - CUCKOO_USER -c "vboxmanage hostonlyif ipconfig SANDINT --ip SANDIP --netmas
 su - CUCKOO_USER -c "vboxmanage dhcpserver modify --netname HostInterfaceNetworking-vboxnet0 --disable"
 /bin/echo 'never' > /sys/kernel/mm/transparent_hugepage/defrag
 /bin/echo 'never' > /sys/kernel/mm/transparent_hugepage/enabled
+su - CUCKOO_USER -c "python2.7 CUCKOODIR/utils/elasticsearch2elastic.py > /dev/null &"
 #ENDCUCKOOLOCALS

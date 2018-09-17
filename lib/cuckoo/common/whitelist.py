@@ -16,6 +16,9 @@ def is_whitelisted_domain(domain):
 def is_whitelisted_url(url):
     return url in urls
 
+def is_whitelisted_ip(ip):
+    return ip in ips
+
 # Initialize the domain whitelist.
 for domain in open(os.path.join(CUCKOO_ROOT, "data", "whitelist", "domain.txt")):
     domains.add(domain.strip())
@@ -23,3 +26,7 @@ for domain in open(os.path.join(CUCKOO_ROOT, "data", "whitelist", "domain.txt"))
 # Initialize the URL whitelist.
 for url in open(os.path.join(CUCKOO_ROOT, "data", "whitelist", "url.txt")):
     urls.add(url.strip())
+
+# Initialize the URL whitelist.
+for ip in open(os.path.join(CUCKOO_ROOT, "data", "whitelist", "ip.txt")):
+    ips.add(ip.strip())

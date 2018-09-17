@@ -108,7 +108,7 @@ def index(request):
         filename = os.path.basename(mongo_obj["target"]["file"]["name"]) if category == "file" else "N/A"
         new.update({"filename": filename})
         analyses_files.append(new)
-    moloch_url = 'https://{0}:8005/sessions?date=2180&expression=(tags==[{1}])'.format(request.META["SERVER_NAME"], ",".join(["cuckoo:"+str(analysis) for analysis in analysis_numbers]))
+    moloch_url = 'https://{0}{1}/sessions?date=2180&expression=(tags==[{2}])'.format(request.META["SERVER_NAME"], ":"+settings.MOLOCH_PORT if settings.MOLOCH_PORT else "", ",".join(["cuckoo:"+str(analysis) for analysis in analysis_numbers]))
     lastRules = request.POST.get("lastRules")
     log.info(lastRules)
 

@@ -1,0 +1,26 @@
+##<86>Aug 30 17:22:01 CRON[55606]: pam_unix(cron:session): session closed for user cuckoo
+rule=: pam_unix(cron:session): session %action:char-sep: % for user %username:rest%
+##<86>Aug 30 17:22:01 CRON[55607]: pam_unix(cron:session): session opened for user root by (uid=0)
+rule=: pam_unix(cron:session): session %action:char-sep: % for user %username:char-sep: % by (uid=%uid:char-sep:)%)
+##<85>Aug 30 16:19:23 sudo: bm : TTY=pts/0 ; PWD=/home/bm ; USER=root ; COMMAND=/bin/su -
+rule=: %username:char-sep: % : TTY=%tty:char-sep: % ; PWD=%pwd:char-sep: % ; USER=%dropuser:char-sep: % ; COMMAND=%command:rest%
+##<86>Aug 28 00:04:02 su[45239]: Successful su for cuckoo by root
+rule=: %result:char-sep: % su for %dropuser:char-sep: % by %username:rest%
+##<86>Aug 27 23:54:51 groupadd[41221]: group added to /etc/group: name=cuckoo, GID=1001
+rule=: group added to /etc/group: name=%group:char-sep:,%, GID=%gid:rest%
+##<86>Aug 27 23:54:51 groupadd[41221]: group added to /etc/gshadow: name=cuckoo
+rule=: group added to /etc/gshadow: name=%group:rest%
+##<86>Aug 27 23:53:20 groupadd[40964]: new group: name=scanner, GID=119
+rule=: new group: name=%group:char-sep:,%, GID=%gid:rest%
+##<86>Aug 28 00:05:47 usermod[53544]: add 'netdata' to shadow group 'proxy'
+rule=: add '%username:char-sep:'%' to shadow group '%group:char-sep:'%'
+##<86>Aug 28 00:05:47 usermod[53544]: add 'netdata' to group 'proxy'
+rule=: add '%username:char-sep:'%' to group '%group:char-sep:'%'
+##<86>Aug 28 00:05:47 useradd[53510]: new user: name=netdata, UID=999, GID=998, home=/var/lib/netdata, shell=/usr/sbin/nologin
+rule=: new user: name=%username:char-sep:,%, UID=%uid:char-sep:,%, GID=%gid:char-sep:,%, home=%homedir:char-sep:,%, shell=%shell:rest%
+##<86>Aug 27 23:55:06 chfn[41234]: changed user 'cuckoo' information
+rule=: changed user '%username:char-sep:'%' information
+##<86>Aug 27 23:53:20 chage[40988]: changed password expiry for colord
+rule=: changed password expiry for %username:rest%
+##<85>Aug 27 23:55:03 passwd[41232]: pam_unix(passwd:chauthtok): password changed for cuckoo
+rule=: pam_unix(passwd:%function:char-sep:)%): password changed for %username:rest%

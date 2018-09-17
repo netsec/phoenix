@@ -1,0 +1,728 @@
+{
+"template" : "suricata-*", "settings": { "number_of_shards": 1 , "number_of_replicas":0} ,
+    "mappings" : {
+      "events" : {
+        "properties" : {
+          "alert" : {
+            "properties" : {
+              "action" : {
+                "type" : "string"
+              },
+              "category" : {
+                "type" : "string",
+		"fields": {
+            "raw" : {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+              },
+              "gid" : {
+                "type" : "long"
+              },
+              "rev" : {
+                "type" : "long"
+              },
+              "severity" : {
+                "type" : "long"
+              },
+              "signature" : {
+                "type" : "string",
+		"fields": {
+            "raw" : {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+              },
+              "signature_id" : {
+                "type" : "long"
+              }
+            }
+          },
+          "app_proto" : {
+            "type" : "string"
+          },
+          "app_proto_tc" : {
+            "type" : "string"
+          },
+          "dest_ip" : {
+            "type" : "string"
+          },
+          "dest_port" : {
+            "type" : "long"
+          },
+          "dns" : {
+            "properties" : {
+              "id" : {
+                "type" : "long"
+              },
+              "rcode" : {
+                "type" : "string"
+              },
+              "rdata" : {
+                "type" : "string",
+		"fields": {
+            "raw" : {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+              },
+              "rrname" : {
+                "type" : "string",
+		"fields": {
+            "raw" : {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+              },
+              "rrtype" : {
+                "type" : "string"
+              },
+              "ttl" : {
+                "type" : "long"
+              },
+              "tx_id" : {
+                "type" : "long"
+              },
+              "type" : {
+                "type" : "string"
+              }
+            }
+          },
+          "email" : {
+            "properties" : {
+              "from" : {
+                "type" : "string"
+              },
+              "status" : {
+                "type" : "string"
+              },
+              "to" : {
+                "type" : "string"
+              },
+              "url" : {
+                "type" : "string"
+              }
+            }
+          },
+          "event_type" : {
+            "type" : "string"
+          },
+          "fileinfo" : {
+            "properties" : {
+              "filename" : {
+                "type" : "string",
+		"fields": {
+            "raw" : {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+              },
+              "magic" : {
+                "type" : "string",
+		"fields": {
+            "raw" : {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+              },
+              "sha1" : {
+                "type" : "string"
+              },
+              "size" : {
+                "type" : "long"
+              },
+              "state" : {
+                "type" : "string"
+              },
+              "stored" : {
+                "type" : "boolean"
+              },
+              "tx_id" : {
+                "type" : "long"
+              }
+            }
+          },
+          "flow" : {
+            "properties" : {
+              "age" : {
+                "type" : "long"
+              },
+              "bytes_toclient" : {
+                "type" : "long"
+              },
+              "bytes_toserver" : {
+                "type" : "long"
+              },
+              "end" : {
+                "type" : "date",
+                "format" : "strict_date_optional_time||epoch_millis"
+              },
+              "pkts_toclient" : {
+                "type" : "long"
+              },
+              "pkts_toserver" : {
+                "type" : "long"
+              },
+              "reason" : {
+                "type" : "string"
+              },
+              "start" : {
+                "type" : "date",
+                "format" : "strict_date_optional_time||epoch_millis"
+              },
+              "state" : {
+                "type" : "string"
+              }
+            }
+          },
+          "flow_id" : {
+            "type" : "long"
+          },
+          "http" : {
+            "properties" : {
+              "hostname" : {
+                "type" : "string"
+              },
+              "http_content_type" : {
+                "type" : "string"
+              },
+              "http_method" : {
+                "type" : "string"
+              },
+              "http_refer" : {
+                "type" : "string",
+		"fields": {
+            "raw" : {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+              },
+              "http_user_agent" : {
+                "type" : "string",
+		"fields": {
+            "raw" : {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+              },
+              "length" : {
+                "type" : "long"
+              },
+              "protocol" : {
+                "type" : "string"
+              },
+              "redirect" : {
+                "type" : "string"
+              },
+              "status" : {
+                "type" : "long"
+              },
+              "url" : {
+                "type" : "string",
+		"fields": {
+            "raw" : {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+              },
+              "xff" : {
+                "type" : "string"
+              }
+            }
+          },
+          "icmp_code" : {
+            "type" : "long"
+          },
+          "icmp_type" : {
+            "type" : "long"
+          },
+          "in_iface" : {
+            "type" : "string"
+          },
+          "proto" : {
+            "type" : "string"
+          },
+          "smtp" : {
+            "properties" : {
+              "helo" : {
+                "type" : "string"
+              },
+              "mail_from" : {
+                "type" : "string"
+              },
+              "rcpt_to" : {
+                "type" : "string"
+              }
+            }
+          },
+          "src_ip" : {
+            "type" : "string"
+          },
+          "src_port" : {
+            "type" : "long"
+          },
+          "stats" : {
+            "properties" : {
+              "app_layer" : {
+                "properties" : {
+                  "flow" : {
+                    "properties" : {
+                      "dcerpc_tcp" : {
+                        "type" : "long"
+                      },
+                      "dcerpc_udp" : {
+                        "type" : "long"
+                      },
+                      "dns_tcp" : {
+                        "type" : "long"
+                      },
+                      "dns_udp" : {
+                        "type" : "long"
+                      },
+                      "failed_tcp" : {
+                        "type" : "long"
+                      },
+                      "failed_udp" : {
+                        "type" : "long"
+                      },
+                      "ftp" : {
+                        "type" : "long"
+                      },
+                      "http" : {
+                        "type" : "long"
+                      },
+                      "imap" : {
+                        "type" : "long"
+                      },
+                      "msn" : {
+                        "type" : "long"
+                      },
+                      "smb" : {
+                        "type" : "long"
+                      },
+                      "smtp" : {
+                        "type" : "long"
+                      },
+                      "ssh" : {
+                        "type" : "long"
+                      },
+                      "tls" : {
+                        "type" : "long"
+                      }
+                    }
+                  },
+                  "tx" : {
+                    "properties" : {
+                      "dns_tcp" : {
+                        "type" : "long"
+                      },
+                      "dns_udp" : {
+                        "type" : "long"
+                      },
+                      "http" : {
+                        "type" : "long"
+                      },
+                      "smtp" : {
+                        "type" : "long"
+                      },
+                      "tls" : {
+                        "type" : "long"
+                      }
+                    }
+                  }
+                }
+              },
+              "capture" : {
+                "properties" : {
+                  "kernel_drops" : {
+                    "type" : "long"
+                  },
+                  "kernel_packets" : {
+                    "type" : "long"
+                  }
+                }
+              },
+              "decoder" : {
+                "properties" : {
+                  "avg_pkt_size" : {
+                    "type" : "long"
+                  },
+                  "bytes" : {
+                    "type" : "long"
+                  },
+                  "dce" : {
+                    "properties" : {
+                      "pkt_too_small" : {
+                        "type" : "long"
+                      }
+                    }
+                  },
+                  "erspan" : {
+                    "type" : "long"
+                  },
+                  "ethernet" : {
+                    "type" : "long"
+                  },
+                  "gre" : {
+                    "type" : "long"
+                  },
+                  "icmpv4" : {
+                    "type" : "long"
+                  },
+                  "icmpv6" : {
+                    "type" : "long"
+                  },
+                  "invalid" : {
+                    "type" : "long"
+                  },
+                  "ipraw" : {
+                    "properties" : {
+                      "invalid_ip_version" : {
+                        "type" : "long"
+                      }
+                    }
+                  },
+                  "ipv4" : {
+                    "type" : "long"
+                  },
+                  "ipv4_in_ipv6" : {
+                    "type" : "long"
+                  },
+                  "ipv6" : {
+                    "type" : "long"
+                  },
+                  "ipv6_in_ipv6" : {
+                    "type" : "long"
+                  },
+                  "ltnull" : {
+                    "properties" : {
+                      "pkt_too_small" : {
+                        "type" : "long"
+                      },
+                      "unsupported_type" : {
+                        "type" : "long"
+                      }
+                    }
+                  },
+                  "max_pkt_size" : {
+                    "type" : "long"
+                  },
+                  "mpls" : {
+                    "type" : "long"
+                  },
+                  "null" : {
+                    "type" : "long"
+                  },
+                  "pkts" : {
+                    "type" : "long"
+                  },
+                  "ppp" : {
+                    "type" : "long"
+                  },
+                  "pppoe" : {
+                    "type" : "long"
+                  },
+                  "raw" : {
+                    "type" : "long"
+                  },
+                  "sctp" : {
+                    "type" : "long"
+                  },
+                  "sll" : {
+                    "type" : "long"
+                  },
+                  "tcp" : {
+                    "type" : "long"
+                  },
+                  "teredo" : {
+                    "type" : "long"
+                  },
+                  "udp" : {
+                    "type" : "long"
+                  },
+                  "vlan" : {
+                    "type" : "long"
+                  },
+                  "vlan_qinq" : {
+                    "type" : "long"
+                  }
+                }
+              },
+              "defrag" : {
+                "properties" : {
+                  "ipv4" : {
+                    "properties" : {
+                      "fragments" : {
+                        "type" : "long"
+                      },
+                      "reassembled" : {
+                        "type" : "long"
+                      },
+                      "timeouts" : {
+                        "type" : "long"
+                      }
+                    }
+                  },
+                  "ipv6" : {
+                    "properties" : {
+                      "fragments" : {
+                        "type" : "long"
+                      },
+                      "reassembled" : {
+                        "type" : "long"
+                      },
+                      "timeouts" : {
+                        "type" : "long"
+                      }
+                    }
+                  },
+                  "max_frag_hits" : {
+                    "type" : "long"
+                  }
+                }
+              },
+              "detect" : {
+                "properties" : {
+                  "alert" : {
+                    "type" : "long"
+                  }
+                }
+              },
+              "dns" : {
+                "properties" : {
+                  "memcap_global" : {
+                    "type" : "long"
+                  },
+                  "memcap_state" : {
+                    "type" : "long"
+                  },
+                  "memuse" : {
+                    "type" : "long"
+                  }
+                }
+              },
+              "flow" : {
+                "properties" : {
+                  "emerg_mode_entered" : {
+                    "type" : "long"
+                  },
+                  "emerg_mode_over" : {
+                    "type" : "long"
+                  },
+                  "memcap" : {
+                    "type" : "long"
+                  },
+                  "memuse" : {
+                    "type" : "long"
+                  },
+                  "spare" : {
+                    "type" : "long"
+                  },
+                  "tcp_reuse" : {
+                    "type" : "long"
+                  }
+                }
+              },
+              "flow_mgr" : {
+                "properties" : {
+                  "bypassed_pruned" : {
+                    "type" : "long"
+                  },
+                  "closed_pruned" : {
+                    "type" : "long"
+                  },
+                  "est_pruned" : {
+                    "type" : "long"
+                  },
+                  "flows_checked" : {
+                    "type" : "long"
+                  },
+                  "flows_notimeout" : {
+                    "type" : "long"
+                  },
+                  "flows_removed" : {
+                    "type" : "long"
+                  },
+                  "flows_timeout" : {
+                    "type" : "long"
+                  },
+                  "flows_timeout_inuse" : {
+                    "type" : "long"
+                  },
+                  "new_pruned" : {
+                    "type" : "long"
+                  },
+                  "rows_busy" : {
+                    "type" : "long"
+                  },
+                  "rows_checked" : {
+                    "type" : "long"
+                  },
+                  "rows_empty" : {
+                    "type" : "long"
+                  },
+                  "rows_maxlen" : {
+                    "type" : "long"
+                  },
+                  "rows_skipped" : {
+                    "type" : "long"
+                  }
+                }
+              },
+              "http" : {
+                "properties" : {
+                  "memcap" : {
+                    "type" : "long"
+                  },
+                  "memuse" : {
+                    "type" : "long"
+                  }
+                }
+              },
+              "tcp" : {
+                "properties" : {
+                  "invalid_checksum" : {
+                    "type" : "long"
+                  },
+                  "memuse" : {
+                    "type" : "long"
+                  },
+                  "no_flow" : {
+                    "type" : "long"
+                  },
+                  "pseudo" : {
+                    "type" : "long"
+                  },
+                  "pseudo_failed" : {
+                    "type" : "long"
+                  },
+                  "reassembly_gap" : {
+                    "type" : "long"
+                  },
+                  "reassembly_memuse" : {
+                    "type" : "long"
+                  },
+                  "rst" : {
+                    "type" : "long"
+                  },
+                  "segment_memcap_drop" : {
+                    "type" : "long"
+                  },
+                  "sessions" : {
+                    "type" : "long"
+                  },
+                  "ssn_memcap_drop" : {
+                    "type" : "long"
+                  },
+                  "stream_depth_reached" : {
+                    "type" : "long"
+                  },
+                  "syn" : {
+                    "type" : "long"
+                  },
+                  "synack" : {
+                    "type" : "long"
+                  }
+                }
+              },
+              "uptime" : {
+                "type" : "long"
+              }
+            }
+          },
+          "tcp" : {
+            "properties" : {
+              "ack" : {
+                "type" : "boolean"
+              },
+              "cwr" : {
+                "type" : "boolean"
+              },
+              "ecn" : {
+                "type" : "boolean"
+              },
+              "fin" : {
+                "type" : "boolean"
+              },
+              "psh" : {
+                "type" : "boolean"
+              },
+              "rst" : {
+                "type" : "boolean"
+              },
+              "state" : {
+                "type" : "string"
+              },
+              "syn" : {
+                "type" : "boolean"
+              },
+              "tcp_flags" : {
+                "type" : "string"
+              },
+              "tcp_flags_tc" : {
+                "type" : "string"
+              },
+              "tcp_flags_ts" : {
+                "type" : "string"
+              }
+            }
+          },
+          "timestamp" : {
+            "type" : "date",
+            "format" : "strict_date_optional_time||epoch_millis"
+          },
+          "tls" : {
+            "properties" : {
+              "fingerprint" : {
+                "type" : "string"
+              },
+              "issuerdn" : {
+                "type" : "string",
+		"fields": {
+            "raw" : {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+              },
+              "notafter" : {
+                "type" : "date",
+                "format" : "strict_date_optional_time||epoch_millis"
+              },
+              "notbefore" : {
+                "type" : "date",
+                "format" : "strict_date_optional_time||epoch_millis"
+              },
+              "sni" : {
+                "type" : "string"
+              },
+              "subject" : {
+                "type" : "string",
+		"fields": {
+            "raw" : {
+              "type": "string",
+              "index": "not_analyzed"
+            }
+          }
+              },
+              "version" : {
+                "type" : "string"
+              }
+            }
+          },
+          "tx_id" : {
+            "type" : "long"
+          }
+        }
+      }
+    }
+}

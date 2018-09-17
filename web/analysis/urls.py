@@ -16,6 +16,7 @@ urlpatterns = [
     url(r"^search/(?P<task_id>\d+)/$", views.search_behavior),
     url(r"^search/$", views.search),
     url(r"^pending/$", views.pending),
+    url(r"^idapro/(?P<analysis_id>\d+)/(?P<pid>\d+)/(?P<num>\d+)/$", views.idapro),
     url(r"^(?P<task_id>\d+)/pcapstream/(?P<conntuple>[.,\w]+)/$", views.pcapstream),
     url(r"^moloch"
         r"/(?P<ip>[\d\.]+)?/(?P<host>[ a-zA-Z0-9-_\.]+)?"

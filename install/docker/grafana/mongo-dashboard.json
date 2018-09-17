@@ -1,0 +1,978 @@
+{
+	"annotations": {
+		"list": [{
+				"builtIn": 1,
+				"datasource": "-- Grafana --",
+				"enable": true,
+				"hide": true,
+				"iconColor": "rgba(0, 211, 255, 1)",
+				"name": "Annotations & Alerts",
+				"type": "dashboard"
+			}
+		]
+	},
+	"editable": true,
+	"gnetId": null,
+	"graphTooltip": 0,
+	"id": null,
+	"links": [],
+	"panels": [{
+			"aliasColors": {},
+			"bars": false,
+			"dashLength": 10,
+			"dashes": false,
+			"datasource": "Mongo stats",
+			"fill": 1,
+			"gridPos": {
+				"h": 9,
+				"w": 8,
+				"x": 0,
+				"y": 0
+			},
+			"id": 6,
+			"legend": {
+				"avg": false,
+				"current": false,
+				"hideEmpty": true,
+				"hideZero": true,
+				"max": false,
+				"min": false,
+				"show": true,
+				"total": false,
+				"values": false
+			},
+			"lines": true,
+			"linewidth": 1,
+			"links": [],
+			"nullPointMode": "null",
+			"percentage": false,
+			"pointradius": 5,
+			"points": false,
+			"renderer": "flot",
+			"seriesOverrides": [],
+			"spaceLength": 10,
+			"stack": false,
+			"steppedLine": false,
+			"targets": [{
+					"bucketAggs": [{
+							"field": "localTime",
+							"id": "2",
+							"settings": {
+								"interval": "1m",
+								"min_doc_count": 0,
+								"trimEdges": 0
+							},
+							"type": "date_histogram"
+						}
+					],
+					"metrics": [{
+							"field": "uptime",
+							"id": "1",
+							"meta": {},
+							"pipelineAgg": "select metric",
+							"settings": {},
+							"type": "avg"
+						}
+					],
+					"query": "network.serviceExecutorTaskStats.threadsRunning:*",
+					"refId": "A",
+					"timeField": "localTime"
+				}
+			],
+			"thresholds": [],
+			"timeFrom": null,
+			"timeShift": null,
+			"title": "Mongo Uptime",
+			"tooltip": {
+				"shared": true,
+				"sort": 0,
+				"value_type": "individual"
+			},
+			"transparent": true,
+			"type": "graph",
+			"xaxis": {
+				"buckets": null,
+				"mode": "time",
+				"name": null,
+				"show": true,
+				"values": []
+			},
+			"yaxes": [{
+					"format": "s",
+					"label": null,
+					"logBase": 1,
+					"max": null,
+					"min": null,
+					"show": true
+				}, {
+					"format": "short",
+					"label": null,
+					"logBase": 1,
+					"max": null,
+					"min": null,
+					"show": true
+				}
+			],
+			"yaxis": {
+				"align": false,
+				"alignLevel": null
+			}
+		}, {
+			"aliasColors": {},
+			"bars": false,
+			"dashLength": 10,
+			"dashes": false,
+			"datasource": "Mongo stats",
+			"fill": 1,
+			"gridPos": {
+				"h": 9,
+				"w": 8,
+				"x": 8,
+				"y": 0
+			},
+			"id": 5,
+			"legend": {
+				"avg": false,
+				"current": false,
+				"hideEmpty": true,
+				"hideZero": true,
+				"max": false,
+				"min": false,
+				"show": true,
+				"total": false,
+				"values": false
+			},
+			"lines": true,
+			"linewidth": 1,
+			"links": [],
+			"nullPointMode": "null",
+			"percentage": false,
+			"pointradius": 5,
+			"points": false,
+			"renderer": "flot",
+			"seriesOverrides": [],
+			"spaceLength": 10,
+			"stack": false,
+			"steppedLine": false,
+			"targets": [{
+					"bucketAggs": [{
+							"field": "localTime",
+							"id": "2",
+							"settings": {
+								"interval": "1m",
+								"min_doc_count": 0,
+								"trimEdges": 0
+							},
+							"type": "date_histogram"
+						}
+					],
+					"metrics": [{
+							"field": "connections.current",
+							"id": "1",
+							"meta": {},
+							"pipelineAgg": "select metric",
+							"settings": {},
+							"type": "sum"
+						}
+					],
+					"query": "network.serviceExecutorTaskStats.threadsRunning:*",
+					"refId": "A",
+					"timeField": "localTime"
+				}
+			],
+			"thresholds": [],
+			"timeFrom": null,
+			"timeShift": null,
+			"title": "Current Connections",
+			"tooltip": {
+				"shared": true,
+				"sort": 0,
+				"value_type": "individual"
+			},
+			"transparent": true,
+			"type": "graph",
+			"xaxis": {
+				"buckets": null,
+				"mode": "time",
+				"name": null,
+				"show": true,
+				"values": []
+			},
+			"yaxes": [{
+					"format": "none",
+					"label": null,
+					"logBase": 1,
+					"max": null,
+					"min": null,
+					"show": true
+				}, {
+					"format": "short",
+					"label": null,
+					"logBase": 1,
+					"max": null,
+					"min": null,
+					"show": true
+				}
+			],
+			"yaxis": {
+				"align": false,
+				"alignLevel": null
+			}
+		}, {
+			"aliasColors": {},
+			"bars": false,
+			"dashLength": 10,
+			"dashes": false,
+			"datasource": "Mongo stats",
+			"fill": 1,
+			"gridPos": {
+				"h": 9,
+				"w": 8,
+				"x": 16,
+				"y": 0
+			},
+			"id": 4,
+			"legend": {
+				"avg": false,
+				"current": false,
+				"hideEmpty": true,
+				"hideZero": true,
+				"max": false,
+				"min": false,
+				"show": true,
+				"total": false,
+				"values": false
+			},
+			"lines": true,
+			"linewidth": 1,
+			"links": [],
+			"nullPointMode": "null",
+			"percentage": false,
+			"pointradius": 5,
+			"points": false,
+			"renderer": "flot",
+			"seriesOverrides": [],
+			"spaceLength": 10,
+			"stack": false,
+			"steppedLine": false,
+			"targets": [{
+					"bucketAggs": [{
+							"field": "localTime",
+							"id": "2",
+							"settings": {
+								"interval": "1m",
+								"min_doc_count": 0,
+								"trimEdges": 0
+							},
+							"type": "date_histogram"
+						}
+					],
+					"metrics": [{
+							"field": "globalLock.activeClients.total",
+							"id": "1",
+							"meta": {},
+							"pipelineAgg": "select metric",
+							"settings": {},
+							"type": "sum"
+						}
+					],
+					"query": "network.serviceExecutorTaskStats.threadsRunning:*",
+					"refId": "A",
+					"timeField": "localTime"
+				}
+			],
+			"thresholds": [],
+			"timeFrom": null,
+			"timeShift": null,
+			"title": "Active Clients",
+			"tooltip": {
+				"shared": true,
+				"sort": 0,
+				"value_type": "individual"
+			},
+			"transparent": true,
+			"type": "graph",
+			"xaxis": {
+				"buckets": null,
+				"mode": "time",
+				"name": null,
+				"show": true,
+				"values": []
+			},
+			"yaxes": [{
+					"format": "none",
+					"label": null,
+					"logBase": 1,
+					"max": null,
+					"min": null,
+					"show": true
+				}, {
+					"format": "short",
+					"label": null,
+					"logBase": 1,
+					"max": null,
+					"min": null,
+					"show": true
+				}
+			],
+			"yaxis": {
+				"align": false,
+				"alignLevel": null
+			}
+		}, {
+			"aliasColors": {},
+			"bars": false,
+			"dashLength": 10,
+			"dashes": false,
+			"datasource": "Mongo stats",
+			"fill": 1,
+			"gridPos": {
+				"h": 9,
+				"w": 8,
+				"x": 0,
+				"y": 9
+			},
+			"id": 8,
+			"legend": {
+				"avg": false,
+				"current": false,
+				"hideEmpty": true,
+				"hideZero": true,
+				"max": false,
+				"min": false,
+				"show": true,
+				"total": false,
+				"values": false
+			},
+			"lines": true,
+			"linewidth": 1,
+			"links": [],
+			"nullPointMode": "null",
+			"percentage": false,
+			"pointradius": 5,
+			"points": false,
+			"renderer": "flot",
+			"seriesOverrides": [],
+			"spaceLength": 10,
+			"stack": false,
+			"steppedLine": false,
+			"targets": [{
+					"bucketAggs": [{
+							"field": "localTime",
+							"id": "2",
+							"settings": {
+								"interval": "1m",
+								"min_doc_count": 0,
+								"trimEdges": 0
+							},
+							"type": "date_histogram"
+						}
+					],
+					"metrics": [{
+							"field": "avgObjSize",
+							"id": "1",
+							"meta": {},
+							"pipelineAgg": "select metric",
+							"settings": {},
+							"type": "avg"
+						}
+					],
+					"query": "",
+					"refId": "A",
+					"timeField": "localTime"
+				}
+			],
+			"thresholds": [],
+			"timeFrom": null,
+			"timeShift": null,
+			"title": "Avg Object Size",
+			"tooltip": {
+				"shared": true,
+				"sort": 0,
+				"value_type": "individual"
+			},
+			"transparent": true,
+			"type": "graph",
+			"xaxis": {
+				"buckets": null,
+				"mode": "time",
+				"name": null,
+				"show": true,
+				"values": []
+			},
+			"yaxes": [{
+					"format": "decbytes",
+					"label": null,
+					"logBase": 1,
+					"max": null,
+					"min": null,
+					"show": true
+				}, {
+					"format": "short",
+					"label": null,
+					"logBase": 1,
+					"max": null,
+					"min": null,
+					"show": true
+				}
+			],
+			"yaxis": {
+				"align": false,
+				"alignLevel": null
+			}
+		}, {
+			"aliasColors": {},
+			"bars": false,
+			"dashLength": 10,
+			"dashes": false,
+			"datasource": "Mongo stats",
+			"fill": 1,
+			"gridPos": {
+				"h": 9,
+				"w": 8,
+				"x": 8,
+				"y": 9
+			},
+			"id": 2,
+			"legend": {
+				"avg": false,
+				"current": false,
+				"hideEmpty": true,
+				"hideZero": true,
+				"max": false,
+				"min": false,
+				"show": true,
+				"total": false,
+				"values": false
+			},
+			"lines": true,
+			"linewidth": 1,
+			"links": [],
+			"nullPointMode": "null",
+			"percentage": false,
+			"pointradius": 5,
+			"points": false,
+			"renderer": "flot",
+			"seriesOverrides": [],
+			"spaceLength": 10,
+			"stack": false,
+			"steppedLine": false,
+			"targets": [{
+					"bucketAggs": [{
+							"field": "localTime",
+							"id": "2",
+							"settings": {
+								"interval": "1m",
+								"min_doc_count": 0,
+								"trimEdges": 0
+							},
+							"type": "date_histogram"
+						}
+					],
+					"metrics": [{
+							"field": "dataSize",
+							"id": "1",
+							"meta": {},
+							"pipelineAgg": "select metric",
+							"settings": {},
+							"type": "avg"
+						}
+					],
+					"query": "dataSize:*",
+					"refId": "A",
+					"timeField": "localTime"
+				}
+			],
+			"thresholds": [],
+			"timeFrom": null,
+			"timeShift": null,
+			"title": "Data Size",
+			"tooltip": {
+				"shared": true,
+				"sort": 0,
+				"value_type": "individual"
+			},
+			"transparent": true,
+			"type": "graph",
+			"xaxis": {
+				"buckets": null,
+				"mode": "time",
+				"name": null,
+				"show": true,
+				"values": []
+			},
+			"yaxes": [{
+					"format": "decbytes",
+					"label": null,
+					"logBase": 1,
+					"max": null,
+					"min": null,
+					"show": true
+				}, {
+					"format": "short",
+					"label": null,
+					"logBase": 1,
+					"max": null,
+					"min": null,
+					"show": true
+				}
+			],
+			"yaxis": {
+				"align": false,
+				"alignLevel": null
+			}
+		}, {
+			"aliasColors": {},
+			"bars": false,
+			"dashLength": 10,
+			"dashes": false,
+			"datasource": "Mongo stats",
+			"decimals": null,
+			"fill": 1,
+			"gridPos": {
+				"h": 9,
+				"w": 8,
+				"x": 16,
+				"y": 9
+			},
+			"id": 10,
+			"legend": {
+				"alignAsTable": false,
+				"avg": true,
+				"current": true,
+				"hideEmpty": true,
+				"hideZero": true,
+				"max": true,
+				"min": true,
+				"rightSide": false,
+				"show": true,
+				"sideWidth": null,
+				"total": true,
+				"values": true
+			},
+			"lines": true,
+			"linewidth": 1,
+			"links": [],
+			"nullPointMode": "null",
+			"percentage": false,
+			"pointradius": 5,
+			"points": false,
+			"renderer": "flot",
+			"seriesOverrides": [],
+			"spaceLength": 10,
+			"stack": false,
+			"steppedLine": false,
+			"targets": [{
+					"bucketAggs": [{
+							"field": "localTime",
+							"id": "2",
+							"settings": {
+								"interval": "1m",
+								"min_doc_count": 0,
+								"trimEdges": 0
+							},
+							"type": "date_histogram"
+						}
+					],
+					"metrics": [{
+							"field": "objects",
+							"id": "1",
+							"meta": {
+								"std_deviation": true,
+								"std_deviation_bounds_lower": false,
+								"std_deviation_bounds_upper": false
+							},
+							"pipelineAgg": "select metric",
+							"settings": {},
+							"type": "extended_stats"
+						}
+					],
+					"query": "",
+					"refId": "A",
+					"timeField": "localTime"
+				}
+			],
+			"thresholds": [],
+			"timeFrom": null,
+			"timeShift": null,
+			"title": "Objects created",
+			"tooltip": {
+				"shared": true,
+				"sort": 0,
+				"value_type": "individual"
+			},
+			"transparent": true,
+			"type": "graph",
+			"xaxis": {
+				"buckets": null,
+				"mode": "time",
+				"name": null,
+				"show": true,
+				"values": []
+			},
+			"yaxes": [{
+					"format": "none",
+					"label": null,
+					"logBase": 1,
+					"max": null,
+					"min": null,
+					"show": true
+				}, {
+					"format": "short",
+					"label": null,
+					"logBase": 1,
+					"max": null,
+					"min": null,
+					"show": true
+				}
+			],
+			"yaxis": {
+				"align": false,
+				"alignLevel": null
+			}
+		}, {
+			"aliasColors": {},
+			"bars": false,
+			"dashLength": 10,
+			"dashes": false,
+			"datasource": "Mongo stats",
+			"fill": 1,
+			"gridPos": {
+				"h": 9,
+				"w": 8,
+				"x": 0,
+				"y": 18
+			},
+			"id": 7,
+			"legend": {
+				"avg": false,
+				"current": false,
+				"hideEmpty": true,
+				"hideZero": true,
+				"max": false,
+				"min": false,
+				"show": true,
+				"total": false,
+				"values": false
+			},
+			"lines": true,
+			"linewidth": 1,
+			"links": [],
+			"nullPointMode": "null",
+			"percentage": false,
+			"pointradius": 5,
+			"points": false,
+			"renderer": "flot",
+			"seriesOverrides": [],
+			"spaceLength": 10,
+			"stack": false,
+			"steppedLine": false,
+			"targets": [{
+					"bucketAggs": [{
+							"field": "localTime",
+							"id": "2",
+							"settings": {
+								"interval": "1m",
+								"min_doc_count": 0,
+								"trimEdges": 0
+							},
+							"type": "date_histogram"
+						}
+					],
+					"metrics": [{
+							"field": "metrics.commands.ping.total",
+							"id": "1",
+							"meta": {},
+							"pipelineAgg": "select metric",
+							"settings": {},
+							"type": "sum"
+						}
+					],
+					"query": "network.serviceExecutorTaskStats.threadsRunning:*",
+					"refId": "A",
+					"timeField": "localTime"
+				}
+			],
+			"thresholds": [],
+			"timeFrom": null,
+			"timeShift": null,
+			"title": "Ping Response",
+			"tooltip": {
+				"shared": true,
+				"sort": 0,
+				"value_type": "individual"
+			},
+			"transparent": true,
+			"type": "graph",
+			"xaxis": {
+				"buckets": null,
+				"mode": "time",
+				"name": null,
+				"show": true,
+				"values": []
+			},
+			"yaxes": [{
+					"format": "ms",
+					"label": null,
+					"logBase": 1,
+					"max": null,
+					"min": null,
+					"show": true
+				}, {
+					"format": "short",
+					"label": null,
+					"logBase": 1,
+					"max": null,
+					"min": null,
+					"show": true
+				}
+			],
+			"yaxis": {
+				"align": false,
+				"alignLevel": null
+			}
+		}, {
+			"aliasColors": {},
+			"bars": false,
+			"dashLength": 10,
+			"dashes": false,
+			"datasource": "Mongo stats",
+			"fill": 1,
+			"gridPos": {
+				"h": 9,
+				"w": 8,
+				"x": 8,
+				"y": 18
+			},
+			"id": 9,
+			"legend": {
+				"avg": false,
+				"current": false,
+				"hideEmpty": true,
+				"hideZero": true,
+				"max": false,
+				"min": false,
+				"show": true,
+				"total": false,
+				"values": false
+			},
+			"lines": true,
+			"linewidth": 1,
+			"links": [],
+			"nullPointMode": "null",
+			"percentage": false,
+			"pointradius": 5,
+			"points": false,
+			"renderer": "flot",
+			"seriesOverrides": [],
+			"spaceLength": 10,
+			"stack": false,
+			"steppedLine": false,
+			"targets": [{
+					"bucketAggs": [{
+							"field": "localTime",
+							"id": "2",
+							"settings": {
+								"interval": "1m",
+								"min_doc_count": 0,
+								"trimEdges": 0
+							},
+							"type": "date_histogram"
+						}
+					],
+					"metrics": [{
+							"field": "metrics.document.returned",
+							"id": "1",
+							"meta": {},
+							"pipelineAgg": "select metric",
+							"settings": {},
+							"type": "sum"
+						}
+					],
+					"query": "",
+					"refId": "A",
+					"timeField": "localTime"
+				}
+			],
+			"thresholds": [],
+			"timeFrom": null,
+			"timeShift": null,
+			"title": "Documents returned",
+			"tooltip": {
+				"shared": true,
+				"sort": 0,
+				"value_type": "individual"
+			},
+			"transparent": true,
+			"type": "graph",
+			"xaxis": {
+				"buckets": null,
+				"mode": "time",
+				"name": null,
+				"show": true,
+				"values": []
+			},
+			"yaxes": [{
+					"format": "none",
+					"label": null,
+					"logBase": 1,
+					"max": null,
+					"min": null,
+					"show": true
+				}, {
+					"format": "short",
+					"label": null,
+					"logBase": 1,
+					"max": null,
+					"min": null,
+					"show": true
+				}
+			],
+			"yaxis": {
+				"align": false,
+				"alignLevel": null
+			}
+		}, {
+			"aliasColors": {},
+			"bars": false,
+			"dashLength": 10,
+			"dashes": false,
+			"datasource": "Mongo stats",
+			"fill": 1,
+			"gridPos": {
+				"h": 9,
+				"w": 8,
+				"x": 16,
+				"y": 18
+			},
+			"id": 3,
+			"legend": {
+				"avg": false,
+				"current": false,
+				"hideEmpty": true,
+				"hideZero": true,
+				"max": false,
+				"min": false,
+				"show": true,
+				"total": false,
+				"values": false
+			},
+			"lines": true,
+			"linewidth": 1,
+			"links": [],
+			"nullPointMode": "null",
+			"percentage": false,
+			"pointradius": 5,
+			"points": false,
+			"renderer": "flot",
+			"seriesOverrides": [],
+			"spaceLength": 10,
+			"stack": false,
+			"steppedLine": false,
+			"targets": [{
+					"bucketAggs": [{
+							"field": "localTime",
+							"id": "2",
+							"settings": {
+								"interval": "1m",
+								"min_doc_count": 0,
+								"trimEdges": 0
+							},
+							"type": "date_histogram"
+						}
+					],
+					"metrics": [{
+							"field": "network.serviceExecutorTaskStats.threadsRunning",
+							"id": "1",
+							"meta": {},
+							"pipelineAgg": "select metric",
+							"settings": {},
+							"type": "sum"
+						}
+					],
+					"query": "network.serviceExecutorTaskStats.threadsRunning:*",
+					"refId": "A",
+					"timeField": "localTime"
+				}
+			],
+			"thresholds": [],
+			"timeFrom": null,
+			"timeShift": null,
+			"title": "Running Threads",
+			"tooltip": {
+				"shared": true,
+				"sort": 0,
+				"value_type": "individual"
+			},
+			"transparent": true,
+			"type": "graph",
+			"xaxis": {
+				"buckets": null,
+				"mode": "time",
+				"name": null,
+				"show": true,
+				"values": []
+			},
+			"yaxes": [{
+					"format": "none",
+					"label": null,
+					"logBase": 1,
+					"max": null,
+					"min": null,
+					"show": true
+				}, {
+					"format": "short",
+					"label": null,
+					"logBase": 1,
+					"max": null,
+					"min": null,
+					"show": true
+				}
+			],
+			"yaxis": {
+				"align": false,
+				"alignLevel": null
+			}
+		}
+	],
+	"refresh": false,
+	"schemaVersion": 16,
+	"style": "dark",
+	"tags": [],
+	"templating": {
+		"list": []
+	},
+	"time": {
+		"from": "now-6h",
+		"to": "now"
+	},
+	"timepicker": {
+		"refresh_intervals": [
+			"5s",
+			"10s",
+			"30s",
+			"1m",
+			"5m",
+			"15m",
+			"30m",
+			"1h",
+			"2h",
+			"1d"
+		],
+		"time_options": [
+			"5m",
+			"15m",
+			"1h",
+			"6h",
+			"12h",
+			"24h",
+			"2d",
+			"7d",
+			"30d"
+		]
+	},
+	"timezone": "",
+	"title": "Mongo Stats",
+	"uid": "iGvprEFmk",
+	"version": 11
+}

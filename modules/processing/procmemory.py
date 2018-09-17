@@ -8,6 +8,8 @@ import logging
 import os
 import re
 import struct
+import gzip
+import shutil
 
 from lib.cuckoo.common.abstracts import Processing
 from lib.cuckoo.common.objects import File
@@ -95,6 +97,10 @@ class ProcessMemory(Processing):
             )
             if type_ == "CODE":
                 print>>o, "autoMark(%s, AU_CODE)" % region["addr"]
+        o.seek(0)
+        with gzip.open(process["file"].replace(".dmp", ".py.gz"), 'wb') as f_out:
+            f_out.writelines(o)
+        os.remove(process["file"].replace(".dmp", ".py"))
 
     def _fixup_pe_header(self, pe):
         """Fixes the PE header from an in-memory representation to an

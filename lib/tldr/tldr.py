@@ -2,24 +2,26 @@
 import argparse
 import datetime
 import json
-import os
+import os,sys
 
 from elasticsearch import Elasticsearch
 from pymongo import MongoClient
+##TODO move this to whitelist folder
+MD5_WHITELIST = ["d41d8cd98f00b204e9800998ecf8427e", "e03ce4599a8aa4434501d9297b1c29ac"]
+sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", ".."))
+sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), "..","..", "web"))
+sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), "..","..", "web", "web"))
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
+import django
+from django.contrib.auth.models import User
 from django.conf import settings
 from web.tlp_methods import get_tlp_users,get_analyses_numbers_matching_tlp
 from lib.cuckoo.common.whitelist import is_whitelisted_domain, is_whitelisted_url
 
 
 today = datetime.date.today()
-now = today.strftime('%Y%m%d')
-month = today.strftime('%Y%m')
-httpList = []
-httpMemList = []
-domainList = []
-ipList = []
-output = {"File": {}}
-myid = 0
+
+# myid = 0
 
 
 def getList(ifile):
@@ -56,12 +58,15 @@ def EsInsert(index, dtype, myid, body):
     res = es.index(index=index, doc_type=dtype, body=body)
 
 
-def MD5Dropped(dmd5, md5src, drophit, local):
+def MD5Dropped(dmd5, drophit, local):
+    md5out = []
+    if dmd5 in MD5_WHITELIST:
+        return []
     if local:
         mquery = '''{ "query": {"match":{"hmd5":"''' + dmd5 + '''"}}}'''
     mhit = molochEsQuery(mquery)
     if not mhit["hits"]["hits"]:
-        return False
+        return []
 
     for dhit in mhit["hits"]["hits"]:
         dobj = dict(MD5=dmd5, SHA1=drophit["sha1"], Drop_File_Type=drophit["type"], File_Path=drophit["filepath"],
@@ -77,11 +82,12 @@ def MD5Dropped(dmd5, md5src, drophit, local):
                 for vscan in drophit["virustotal"]["scans"]:
                     if drophit["virustotal"]["scans"][vscan]["detected"]:
                         dobj["AV_Hits"][vscan] = drophit["virustotal"]["scans"][vscan]["result"]
-        output[md5src].append(dobj)
-        return True
+        md5out.append(dobj)
+        return md5out
+    return []
 
 
-def MD5H(dmd5, md5src, drophit, local, md5, d):
+def MD5H(dmd5, drophit, md5, d):
     if md5["md5"] == dmd5:
         dobj = dict(MD5=dmd5, SHA1=drophit["sha1"], Drop_File_Type=drophit["type"], Response=md5["response"],
                     URL=md5["protocol"] + "//" + md5["host"] + md5["uri"], Dest_IP=md5["dst"],
@@ -98,38 +104,43 @@ def MD5H(dmd5, md5src, drophit, local, md5, d):
             for vscan in drophit["virustotal"]["scans"]:
                 if drophit["virustotal"]["scans"][vscan]["detected"]:
                     dobj["AV_Hits"][vscan] = drophit["virustotal"]["scans"][vscan]["result"]
-        if md5src not in output:
-            output[md5src] = []
-        if dobj not in output["Dropped_In_Other_Samples"]:
-            output[md5src].append(dobj)
+        return dobj
+    return []
 
 
-def MD5Https(dmd5, md5src, drophit, local):
-    if dmd5 in ["d41d8cd98f00b204e9800998ecf8427e"]:
-        return
+def MD5Https(dmd5, drophit, local, myid):
+    if dmd5 in MD5_WHITELIST:
+        return []
     if local:
-        mdbq = '''{"$and":[{"info.id":''' + str(
+        mdbq = '''{"$and":[{"target.category": "file"},{"info.id":''' + str(
             myid) + '''},{"$or":[{"network.https_ex.md5":"''' + dmd5 + '''"},{"network.http_ex.md5":"''' + dmd5 + '''"}]}]}'''
     else:
-        mdbq = '''{"$and":[{"info.id":{"$ne":''' + str(
+        mdbq = '''{"$and":[{"target.category": "file"},{"info.id":{"$ne":''' + str(
             myid) + '''}},{"$or":[{"network.https_ex.md5":"''' + dmd5 + '''"},{"network.http_ex.md5":"''' + dmd5 + '''"}]}]}'''
     mdh = mongoQuery(json.loads(mdbq))
+    md5out = []
     if mdh:
         for d in mdh:
             for md5 in d["network"]["https_ex"]:
-                MD5H(dmd5, md5src, drophit, local, md5, d)
+                md5out.append(MD5H(dmd5, drophit, md5, d))
             for md5 in d["network"]["http_ex"]:
-                MD5H(dmd5, md5src, drophit, local, md5, d)
+                md5out.append(MD5H(dmd5, drophit, md5, d))
+    return md5out
 
 
 # Start
-def run_tldr(myid, user, clionly):
-    myid = int(myid)
+def run_tldr(id, username, clionly):
+    myid = int(id)
     print(myid)
+    httpList = []
+    httpMemList = []
+    if clionly:
+        django.setup()
+    user = User.objects.get(username=username)
     myids = get_analyses_numbers_matching_tlp(user.username, get_tlp_users(user))
     if str(myid) in myids:
         mdbquery = {"info.id": myid}
-
+    output = {"File": {}}
     idcursor = mongoQuery(mdbquery)
     for doc in idcursor:
         output["File"] = dict(sha1=doc["target"]["file"]["sha1"], md5=doc["target"]["file"]["md5"],
@@ -177,6 +188,17 @@ def run_tldr(myid, user, clionly):
                                 "raw_request": httphit["request"]}
                         output["HTTP"].append(httpobj)
 
+            if 'tcp' in doc["network"]:
+                output["TCP"] = []
+                for tcpcon in doc["network"]["tcp"]:
+                    if (tcpcon["dport"] > 1023) and (tcpcon["sport"] > 1023):
+                        ##TODO grab this from the config instead
+                        if str(tcpcon["dst"]).startswith('10.200.0.'):
+                            tcpobj = {"ip": tcpcon["src"], "port": tcpcon["sport"]}
+                        else:
+                            tcpobj = {"ip": tcpcon["dst"], "port": tcpcon["dport"]}
+                        output["TCP"].append(tcpobj)
+
         if 'dns' in doc["network"]:
             output["DNS"] = []
             for dns in doc["network"]["dns"]:
@@ -188,15 +210,18 @@ def run_tldr(myid, user, clionly):
             output["Dropped_files"] = []
             for drophit in doc["dropped"]:
                 dmd5 = drophit["md5"]
-                MD5Dropped(dmd5, "Dropped_files", drophit, True)
-                MD5Https(dmd5, "Dropped_files", drophit, True)
+                md5DroppedOut = []
+                md5DroppedOut.extend(MD5Dropped(dmd5, drophit, True))
+                md5DroppedOut.extend(MD5Https(dmd5, drophit, True, myid))
+                output["Dropped_files"] = md5DroppedOut
                 ##TODO - modify query to exclude itself when looking for 'dropped in other samples'
-                MD5Https(dmd5, "Dropped_In_Other_Samples", drophit, False)
+                output["Dropped_In_Other_Samples"] = MD5Https(dmd5, drophit, False, myid)
+
     # outJson = json.dumps(output)
     # pretty
     outJson = json.dumps(output, indent=4, sort_keys=True)
     if clionly:
-        EsInsert("tldr-"+month, "tldr", myid, outJson)
+        EsInsert("tldr-{0}".format(today.strftime('%Y%m')), "tldr", myid, outJson)
     print(outJson)
     return outJson
 
@@ -207,4 +232,4 @@ if __name__ == '__main__':
     parser.add_argument('--id', help='cuckoo ID')
     parser.add_argument('--user', help='user ID')
     args = vars(parser.parse_args())
-    run_tldr(args['id'],args['user'],True)
+    run_tldr(args['id'], args['user'], True)
