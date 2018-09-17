@@ -677,9 +677,9 @@ MISP_COMMAND="update users set authkey='$DOCKER_MISP_API' where id=1;"
 MISP_MYSQL_SETUP="GRANT ALL PRIVILEGES on misp.* to '$DOCKER_MISP_MYSQL_USER'@'172.18.1.1'  IDENTIFIED BY '$DOCKER_MISP_MYSQL_PASSWORD';"
 MISP_SED_COMMAND="sed -i 's/127.0.0.1/0.0.0.0/g' /etc/mysql/mariadb.conf.d/50-server.cnf"
 
-docker-compose  -f ../docker/docker-compose.yml -T exec phoenix-misp sh -c "mysql misp -se \"$MISP_COMMAND\""
-docker-compose  -f ../docker/docker-compose.yml -T exec phoenix-misp sh -c "mysql misp -se \"$MISP_MYSQL_SETUP\""
-docker-compose  -f ../docker/docker-compose.yml -T exec phoenix-misp sh -c "$MISP_SED_COMMAND"
+docker-compose  -f ../docker/docker-compose.yml exec -T phoenix-misp sh -c "mysql misp -se \"$MISP_COMMAND\""
+docker-compose  -f ../docker/docker-compose.yml exec -T phoenix-misp sh -c "mysql misp -se \"$MISP_MYSQL_SETUP\""
+docker-compose  -f ../docker/docker-compose.yml exec -T phoenix-misp sh -c "$MISP_SED_COMMAND"
 docker-compose -f  ../docker/docker-compose.yml restart phoenix-misp
 }
 
@@ -861,8 +861,10 @@ echo "##### Setting up storage #####"
         if [ ! -d "$PHOENIXSTORAGE" ]; then
             mkdir -p "$PHOENIXSTORAGE"
         fi
-   ln -s "$PHOENIXSTORAGE" "$CUCKOODIR/storage" && chown -R $CUCKOO_USER.$CUCKOO_USER "$PHOENIXSTORAGE" "$CUCKOODIR/storage"
-fi
+            mv "$CUCKOODIR/storage" "$PHOENIXSTORAGE"
+            ln -s "$PHOENIXSTORAGE/storage" "$CUCKOODIR/storage"
+            chown -R $CUCKOO_USER.$CUCKOO_USER "$PHOENIXSTORAGE"
+    fi
 }
 
 ## Sometimes you don't know how much work goes into a system until you actually document how it works...
