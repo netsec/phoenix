@@ -1,5 +1,5 @@
 # Phoenix Malware Analysis Appliance
-##### We are eager to work with any Colleges and Universities to help implement Phoenix into their curriculum, especially as it pertains to creating and testing countermeasures.
+##### We are eager to work with any colleges and universities to help implement Phoenix into their curriculum, especially as it pertains to creating and testing countermeasures.
 ##### If Phoenix helps you win and save money, consider donating to our beer & gear fund: 3N8fx47jEKQ6WUUXeziPrS7d1SpWbj954g
 
 ---
