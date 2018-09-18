@@ -97,31 +97,31 @@ def index(request):
                              passwd=options["mysql_password"],
                              db="misp")
         id_cur = mysqldb.cursor()
-        eventinfos = {"\"Phoenix Sandbox analysis #{0}\"".format(file.id): int(file.id) for file in tasks_files}
+        eventinfos = {"\"Phoenix Sandbox analysis #{0}\"".format(task_file.id): int(task_file.id) for task_file in tasks_files}
         id_cur.execute('select max(id), info from events where info in ({0}) group by info'.format(",".join(eventinfos.keys())))
 
         misp_ids = {eventinfos["\"{0}\"".format(id[1])]:int(id[0]) for id in id_cur.fetchall()}
-        event_id_strings = ','.join(str(intid) for intid in misp_ids.keys())
-
-        #misp_ids = ','.join([id[0] for id in id_cur.fetch_all()])
-
-        tag_cur = mysqldb.cursor()
-        tag_cur.execute('select t.name, t.id, et.event_id from event_tags et inner join tags t on et.tag_id = t.id where et.event_id in ({0})'.format(
-            event_id_strings))
         misp_tags = {}
-        for rows in tag_cur.fetchall():
-            if int(rows[2]) not in misp_tags:
-                misp_tags[int(rows[2])] = []
-            misp_tags[int(rows[2])].append(dict(name=rows[0], id=rows[1]))
-
-        att_cur = mysqldb.cursor()
-        att_cur.execute('select a.value1, a.type, o.event_id from objects o inner join attributes a on o.id = a.object_id where o.template_uuid in ("3c177337-fb80-405a-a6c1-1b2ddea8684a","b5acf82e-ecca-4868-82fe-9dbdf4d808c3") and o.event_id in ({0}) and a.id in (select max(a1.id) from attributes a1 where a1.event_id in ({0}) group by a1.event_id, type);'.format(event_id_strings))
-
         misp_atts = {}
-        for rows in att_cur.fetchall():
-            if int(rows[2]) not in misp_atts:
-                misp_atts[int(rows[2])] = {}
-            misp_atts[int(rows[2])][rows[1]] = rows[0]
+        if id_cur.rowcount:
+            event_id_strings = ','.join(str(intid) for intid in misp_ids.keys())
+            #misp_ids = ','.join([id[0] for id in id_cur.fetch_all()])
+
+            tag_cur = mysqldb.cursor()
+            tag_cur.execute('select t.name, t.id, et.event_id from event_tags et inner join tags t on et.tag_id = t.id where et.event_id in ({0})'.format(
+                event_id_strings))
+            for rows in tag_cur.fetchall():
+                if int(rows[2]) not in misp_tags:
+                    misp_tags[int(rows[2])] = []
+                misp_tags[int(rows[2])].append(dict(name=rows[0], id=rows[1]))
+
+            att_cur = mysqldb.cursor()
+            att_cur.execute('select a.value1, a.type, o.event_id from objects o inner join attributes a on o.id = a.object_id where o.template_uuid in ("3c177337-fb80-405a-a6c1-1b2ddea8684a","b5acf82e-ecca-4868-82fe-9dbdf4d808c3") and o.event_id in ({0}) and a.id in (select max(a1.id) from attributes a1 where a1.event_id in ({0}) group by a1.event_id, type);'.format(event_id_strings))
+
+            for rows in att_cur.fetchall():
+                if int(rows[2]) not in misp_atts:
+                    misp_atts[int(rows[2])] = {}
+                misp_atts[int(rows[2])][rows[1]] = rows[0]
 
         mysqldb.close()
         for task in tasks_files:
@@ -161,14 +161,8 @@ def index(request):
             if db.view_errors(task.id):
                 new["errors"] = True
 
-
-            # search_result = get_misp_event(analysis_id)
             if new["id"] in misp_atts:
-            # if search_result:
-            #     misp_index_event = search_result[-1]
-            #     misp_event_id = misp_index_event["id"]
-            #     misp_event = check_misp_errors(misp.get_event(misp_event_id),
-            #                                    "Couldn't search MISP for {0}".format(misp_event_id))
+
                 misp_att_dict = misp_atts[new["id"]]
                 suri_matches = []
                 has_suri = False
