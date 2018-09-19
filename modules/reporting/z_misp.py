@@ -436,11 +436,15 @@ class MISP(Report):
         user_email = user_object.email
         if user_email in users_map and self.task["tlp"] != "red":
             misp_user = users_map[user_email]
-            my_groups = filter(lambda group: any(group_org["org_id"] == misp_user["org_id"] for group_org in group["SharingGroupOrg"]),sharing_groups)
-            for sharing_group in my_groups:
-                self.user_misp = pymisp.PyMISP(url, users_map[user_email]["auth_key"], False, "json")
-                self.publish_event(mode, results, sharing_group["SharingGroup"]["id"])
-
+            self.user_misp = pymisp.PyMISP(url, users_map[user_email]["auth_key"], False, "json")
+            if self.task["tlp"] == "amber":
+                my_groups = filter(lambda group: any(group_org["org_id"] == misp_user["org_id"] for group_org in group["SharingGroupOrg"]),sharing_groups)
+                if not my_groups:
+                    print "No sharing groups found for {0}".format(user_email)
+                for sharing_group in my_groups:
+                    self.publish_event(mode, results, sharing_group["SharingGroup"]["id"])
+            else:
+                self.publish_event(mode, results)
         else:
             if self.task["tlp"] != "red":
                 print "Could not find user {0}, submitting event under default account".format(user_email)
@@ -448,34 +452,6 @@ class MISP(Report):
                 print "TLP Is red for {0}, exporting to filesystem".format(self.task["id"])
             self.user_misp = self.misp
             self.publish_event(mode, results)
-
-        # if common_groups:
-        #     orgs = filter(lambda org: org["name"] in common_groups, orgs)
-        #     for org in orgs:
-        #         email = "{0}@{1}".format(org["name"].lower(), email_suffix)
-        #         if email not in users_map:
-        #             print "{0} not in map of users"
-        #             continue
-        #
-        #         orgkey = users_map[email]
-        #         self.org_misp = pymisp.PyMISP(url, orgkey, False, "json")
-        #         self.publish_event(mode, org["id"], results )
-        #
-        #     # some groups in common
-        # else:
-        #     self.org_misp = self.misp
-        #     self.publish_event(mode, None, results)
-            # no groups in common
-
-        # Old and busted
-        #event = self.misp.new_event(
-        #    distribution=self.misp.distributions.all_communities,
-        #    threat_level_id=self.misp.threat_level.undefined,
-        #    analysis=self.misp.analysis.completed,
-        #    info="Phoenix Sandbox analysis #%d" % self.task["id"],
-        #)
-        # New Hotness
-        organisation_id =1
 
     def publish_event(self, mode, results, sharing_group=None):
         event = self.user_misp.new_event(

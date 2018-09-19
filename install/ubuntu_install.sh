@@ -667,11 +667,13 @@ fi
 }
 
 setup_misp() {
+##TODO migrate this to a localhost socket
 echo "##### Setting up MISP #####"
 MISP_COMMAND_1="mysql misp -se \"GRANT ALL PRIVILEGES on misp.* to \\\"$DOCKER_MISP_MYSQL_USER\\\"@\\\"172.18.1.1\\\"  IDENTIFIED BY \\\"$DOCKER_MISP_MYSQL_PASSWORD\\\";\""
 MISP_COMMAND_2="sed -i 's/127.0.0.1/0.0.0.0/g' /etc/mysql/mariadb.conf.d/50-server.cnf"
-docker-compose  -f ../docker/docker-compose.yml exec -T phoenix-misp sh -c "$MISP_COMMAND_1"
-docker-compose  -f ../docker/docker-compose.yml exec -T phoenix-misp sh -c "$MISP_COMMAND_2"
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-misp sh -c "$MISP_COMMAND_1"
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-misp sh -c "$MISP_COMMAND_2"
+docker-compose -f ../docker/docker-compose.yml restart phoenix-misp
 }
 
 install_vms() {
@@ -859,6 +861,10 @@ echo "##### Setting up storage #####"
     fi
 }
 
+hosts_file() {
+    OUTSIDE_INT=$(ifconfig|grep enp|awk '{print $1}'|while read int; do ifconfig $int |grep 'inet '|awk -F ':' '{print $2}'|awk '{print $1}'; done)
+}
+
 ## Sometimes you don't know how much work goes into a system until you actually document how it works...
 ## This is essentially how the install script breaks everything down:
 
@@ -888,6 +894,7 @@ configure_hunt_containers
 setup_netdata
 start_es_monitoring
 setup_storage
+hosts_file
 
 echo "########################## FINISHED INSTALLING #########################"
 echo "########################################################################"
@@ -910,9 +917,9 @@ echo "#,,       ....   .,.             https://misp.$PHOENIX_HOSTNAME"
 echo "#        .....    .,             https://moloch.$PHOENIX_HOSTNAME"
 echo "#       .....      ."
 echo "#      ...."
-echo "#     ...."
-echo "#    ..."
-echo "#  ...."
-echo "# ..."
+echo "#     ....    /etc/hosts hack:"
+echo "#    ...  < $OUTSIDE_INT    $PHOENIX_HOSTNAME netdata.$PHOENIX_HOSTNAME \\"
+echo "#  ....     grafana.$PHOENIX_HOSTNAME kibana.$PHOENIX_HOSTNAME \\"
+echo "# ...       misp.$PHOENIX_HOSTNAME moloch.$PHOENIX_HOSTNAME >"
 echo "#"
 echo "########################################################################"

@@ -1,6 +1,6 @@
 # Phoenix Malware Analysis Appliance
 ##### We are eager to work with any colleges and universities to help implement Phoenix into their curriculum, especially as it pertains to creating and testing countermeasures.
-##### If Phoenix helps you win and save money, consider donating to our beer & gear fund: 3N8fx47jEKQ6WUUXeziPrS7d1SpWbj954g
+##### If Phoenix helps you win and save money, consider donating to our gear & beer fund: 3N8fx47jEKQ6WUUXeziPrS7d1SpWbj954g
 
 ---
 #### Start generating, and sharing, your own Threat Data and Controls today!
@@ -20,7 +20,26 @@
 ###### TLP Amber - Only members of your groups can view or hunt using the data
 ###### TLP Red - Only you can view or hunt against the data
 
+### Preparing OpenVPN configs
+If you have a folder of OpenVPN configs that end in `.ovpn`, then run this to modify them slightly:
+```bash
+    cd my/openvpn/directory
+    ls *ovpn|while read line; do O=$(echo $line|sed 's/ //g'); mv "$line" "$O"; do
+ne
+
+ls *ovpn|while read vpn; do echo 'route 0.0.0.0 192.0.0.0 net_gateway
+route 64.0.0.0 192.0.0.0 net_gateway
+route 128.0.0.0 192.0.0.0 net_gateway
+route 192.0.0.0 192.0.0.0 net_gateway' >> $vpn; done
+
+ls *ovpn|awk -F '.' '{print $1}'|while read line; do mv $line.ovpn $line.conf; done
+
+
+```
+
 ### Preparing VMs for Phoenix
+
+##### Ensure you set your $HOSTNAME properly first, as we generate many things which are dependent on this
 
 If you already run Cuckoo on machinery other than VirtualBox then you can ignore the next instructions and just copy and paste your current configs once the easy-button has finished.  
 Those of you already running Cuckoo deployments on VirtualBox have an easy migration path.  Tar up your VirtualBox machine directories and import them as a tarball with the easy-button.  
@@ -70,6 +89,12 @@ To export your VMs in a way that the easy-button knows how to import, su to your
 	#!/bin/bash
 	CUCKOO_USER="cuckoo"
 	echo "Cloning phoenix"
+	if [ -z "$(which git)" ]; then
+	    apt-get -y install git
+	fi
+	if [ -z "$(which add-apt-repository)" ]; then
+	    apt-get -y install software-properties-common
+	fi
 	git clone https://github.com/SparkITSolutions/cuckoo.git /opt/phoenix
 	## We used to import ova files, but then you have to setup snapshots.  We're lazy... 
 	## You can still have the easy-button import your OVAs, but then you'll have to do stuff like this later to setup snapshots:
@@ -174,7 +199,18 @@ To export your VMs in a way that the easy-button knows how to import, su to your
 
 ![Create_Groups6](./install/screencaps/6.png "create_groups6")
 
-##### Now that we have trust groups setup, it's time to add some users.
+##### Now that we have trust groups setup in Django, we need to add the same (case sensitive) groups within MISP.  Within your MISP instance go to `Global Actions` -> `Add Sharing Group` and add `SecOps` and `CyberIntel`.
+
+![Sharing_Groups1](./install/screencaps/SharingGroups1.png)
+
+![Sharing_Groups2](./install/screencaps/SharingGroups2.png)
+
+![Sharing_Groups3](./install/screencaps/SharingGroups3.png)
+
+![Sharing_Groups4](./install/screencaps/SharingGroups4.png)
+
+##### With the Django groups and the MISP sharing groups now in sync, we can start adding users to groups.
+
 ```
 python /opt/phoenix/utils/setup_user.py -h 2>/dev/null
 usage: setup_user.py [-h] [-e EMAIL] [-g GROUPS]
@@ -191,7 +227,7 @@ optional arguments:
 ```
 python /opt/phoenix/utils/setup_user.py -e JoeBlow@yourdomain.com -g "SecOps,CyberIntel"
 ```
-##### Now that you have users and groups setup, you can start submitting files, and enjoying your Phoenix install
+##### With users and groups setup, you can start submitting files, and enjoying your Phoenix install
 ##### To programmatically submit files from [Reversing Labs](https://www.reversinglabs.com) or [Virus Total](https://virustotal.com) take a look at `/opt/phoenix/utils/auto_submit.py`
 
 ### Pro Tips:
@@ -199,6 +235,20 @@ python /opt/phoenix/utils/setup_user.py -e JoeBlow@yourdomain.com -g "SecOps,Cyb
 * There are some additional configurations you can enable to make cuckoo use other (larger/faster) mounts if you have those on your systems.  Read through the comments in ubuntu_installer.sh
 * To update the code from github, simply run update_cuckoo.sh from the root of your cuckoo folder (in our example /opt/phoenix).  
 *** We recommend you backup before you run this ***
+* Put the Yara rules you'd like tagged into MISP in /opt/phoenix/data/external
+* When using the auto-tagging feature (conf/misp.json) make sure to setup your tags within MISP first, and use the ID which MISP generates there for your auto-tagging
+* Cuckoo has bugs.  We did everything we could to package up great logging with this appliance.  If things crash, please take a look in kibana and the logs there.
+* We've seen sometimes where cuckoo.py crashes, so often we'll run it in a screen like so:
+
+```
+screen -R cuckoo
+su - $CUCKOO_USER
+cd /opt/phoenix
+python cuckoo.py -d -m 1000000
+```
+
+If you use this greasy hack, remember to take `cuckood` out of `PROGNAMES` in `/etc/init.d/cuckoo_all`.
+
 
 Take a look at Phoenix in our presentation at ACoD in Austin.
 

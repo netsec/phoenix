@@ -1,6 +1,6 @@
 #CUCKOOCRONS
 * * * * * CUCKOODIR/utils/crontab/root/cuckoo_monitor.sh
-*/5 * * * * CUCKOODIR/utils/crontab/root/openvpn_route.sh >> /dev/null 2>&1
+* * * * * CUCKOODIR/utils/crontab/root/openvpn_route.sh >> /dev/null 2>&1
 #0 1 * * * CUCKOODIR/utils/crontab/cuckoo/cuckoo_full_restart.sh >> /var/log/cuckoo/cuckoo_restart.log 2>&1
 0 1 * * * CUCKOODIR/utils/crontab/cuckoo/optimize.sh >> /var/log/cuckoo/optimize.log
 #ENDCUCKOOCRONS
