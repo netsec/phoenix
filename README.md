@@ -27,7 +27,8 @@ If you have a folder of OpenVPN configs that end in `.ovpn`, then run this to mo
     ls *ovpn|while read line; do O=$(echo $line|sed 's/ //g'); mv "$line" "$O"; do
 ne
 
-ls *ovpn|while read vpn; do echo 'route 0.0.0.0 192.0.0.0 net_gateway
+ls *ovpn|while read vpn; do echo 'keepalive 10 60
+route 0.0.0.0 192.0.0.0 net_gateway
 route 64.0.0.0 192.0.0.0 net_gateway
 route 128.0.0.0 192.0.0.0 net_gateway
 route 192.0.0.0 192.0.0.0 net_gateway' >> $vpn; done
@@ -188,7 +189,7 @@ To export your VMs in a way that the easy-button knows how to import, su to your
 
 ##### Now you'll need to allow the Publisher role to tag MISP events.  This is necessary for the accounts linked to Cuckoo to add tags for families, TLP, etc.
 
-##### Under `Administration`. click "List Tags"
+##### Under `Administration`. click "List Roles"
 ![Setup_MISP9](./install/screencaps/Tags1.PNG)
 
 ##### Under the `Publisher` role, click the edit button on the right
