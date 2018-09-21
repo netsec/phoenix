@@ -37,11 +37,16 @@ ls *ovpn|awk -F '.' '{print $1}'|while read line; do mv $line.ovpn $line.conf; d
 
 ```
 
+Ensure 
+
 ### Preparing VMs for Phoenix
 
 ##### Ensure you set your $HOSTNAME properly first, as we generate many things which are dependent on this
 
 If you already run Cuckoo on machinery other than VirtualBox then you can ignore the next instructions and just copy and paste your current configs once the easy-button has finished.  
+
+Please note we use port 8739 for the cuckoo agent, you might need to change that in your configs.
+
 Those of you already running Cuckoo deployments on VirtualBox have an easy migration path.  Tar up your VirtualBox machine directories and import them as a tarball with the easy-button.  
 Doing this will preserve your snapshots, so you shouldn't need much (if any) configuration to migrate from your existing Cuckoo deployment to Phoenix.
 To export your VMs in a way that the easy-button knows how to import, su to your VirtualBox user, run the following commands, and put the output .tar.gz file in ./install/virtualbox/:
@@ -181,6 +186,17 @@ To export your VMs in a way that the easy-button knows how to import, su to your
 
 ###### *Double click MISP option values to set.*
 
+##### Now you'll need to allow the Publisher role to tag MISP events.  This is necessary for the accounts linked to Cuckoo to add tags for families, TLP, etc.
+
+##### Under `Administration`. click "List Tags"
+![Setup_MISP9](./install/screencaps/Tags1.PNG)
+
+##### Under the `Publisher` role, click the edit button on the right
+![Setup_MISP10](./install/screencaps/Tags2.png)
+
+##### Check off "Tagger" and "Tag Editor" checkboxes and click "Edit"
+![Setup_MISP11](./install/screencaps/Tags3.png)
+
 ##### Once you've finished setting up MISP, we need to do a full cuckoo restart
 
 ```
@@ -245,12 +261,12 @@ screen -R cuckoo
 su - $CUCKOO_USER
 cd /opt/phoenix
 python cuckoo.py -d -m 1000000
+## If you use this greasy hack, remember to take `cuckood` out of `PROGNAMES` in `/etc/init.d/cuckoo_all`.
 ```
 
 * If you want to greatly improve processing time, especially as it pertains to volatility, look at conf/memory.conf and allocate some space to `memdump_tmp`.  That will ensure that all volatility processing (very heavy IO) is done entirely in memory.
 * Got lots of cores?  Modify /etc/init.d/cuckoop and crank the threads up for processing.  Use netdata to figure out what your bottlenecks are (disk, cpu, etc.) and tune accordingly.
 
-If you use this greasy hack, remember to take `cuckood` out of `PROGNAMES` in `/etc/init.d/cuckoo_all`.
 
 
 Take a look at Phoenix in our presentation at ACoD in Austin.

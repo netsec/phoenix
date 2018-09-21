@@ -39,7 +39,7 @@ def submit2cuckoo(myfile, vpn, ftype):
     with open(myfile, 'rb') as sample:
         if vpn:
             data = dict(options='route=' + random.choice(vpns) + ',procmemdump=yes',
-                        owner=owner, tlp='green', timeout=90, enforce_timeout=True)
+                        owner=owner, tlp='green', timeout=30, enforce_timeout=True)
         else:
             data = dict(options='procmemdump=yes', owner=owner, tlp='green', timeout=30,
                         enforce_timeout=True)

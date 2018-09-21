@@ -301,6 +301,8 @@ class MISP(Report):
     def check_misp_errors(self,response, error_str):
         if "errors" in response:
             raise Exception("{0}: {1}".format(error_str, response["errors"][-1]))
+        if "response" in response:
+            return response["response"]
 
     def file_hash(self, filename):
         h = hashlib.sha1()
@@ -432,7 +434,7 @@ class MISP(Report):
         # common_groups = set(map(lambda org: org["name"], orgs)) & group_names
 
         # users_map = map(lambda user: {user["User"]["email"]: user["User"]["authkey"]}, self.misp.get_users_list()["response"])
-        users_map = {user["User"]["email"]: {"auth_key": user["User"]["authkey"], "org_id": user["Organisation"]["id"]} for user in self.misp.get_users_list()["response"]}
+        users_map = {user["User"]["email"]: {"auth_key": user["User"]["authkey"], "org_id": user["Organisation"]["id"]} for user in self.check_misp_errors(self.misp.get_users_list(), "Couldn't get users from MISP")}
         user_email = user_object.email
         if user_email in users_map and self.task["tlp"] != "red":
             misp_user = users_map[user_email]
