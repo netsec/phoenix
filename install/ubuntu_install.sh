@@ -862,7 +862,7 @@ echo "##### Setting up storage #####"
 }
 
 hosts_file() {
-    OUTSIDE_INT=$(ifconfig|grep enp|awk '{print $1}'|while read int; do ifconfig $int |grep 'inet '|awk -F ':' '{print $2}'|awk '{print $1}'; done)
+    OUTSIDE_INT=$(ifconfig|grep en|awk '{print $1}'|while read int; do ifconfig $int |grep 'inet '|awk -F ':' '{print $2}'|awk '{print $1}'; done)
 }
 
 ## Sometimes you don't know how much work goes into a system until you actually document how it works...

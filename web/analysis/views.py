@@ -104,7 +104,7 @@ def index(request):
         misp_tags = {}
         misp_atts = {}
         if id_cur.rowcount:
-            event_id_strings = ','.join(str(intid) for intid in misp_ids.keys())
+            event_id_strings = ','.join(str(intid) for intid in misp_ids.values())
             #misp_ids = ','.join([id[0] for id in id_cur.fetch_all()])
 
             tag_cur = mysqldb.cursor()
@@ -160,10 +160,10 @@ def index(request):
 
             if db.view_errors(task.id):
                 new["errors"] = True
+            misp_id = misp_ids.get(analysis_id)
+            if misp_id and misp_id in misp_atts:
 
-            if new["id"] in misp_atts:
-
-                misp_att_dict = misp_atts[new["id"]]
+                misp_att_dict = misp_atts[misp_id]
                 suri_matches = []
                 has_suri = False
                 yara_matches = []
@@ -193,17 +193,17 @@ def index(request):
                     })
 
                 # Tags only show up in "search_index"
-                tags_to_add = []
-                if int(new["id"]) in misp_tags:
-                    for tag in misp_tags[int(new["id"])]:
-                        tag_id = str(tag["id"])
-                        if tag_id not in tags_dict:
-                            continue
-                        tags_to_add.append({
-                            "tag_name": tag["name"],
-                            "tag_link": options["external_url"] + "/events/index/searchtag:{0}".format(tag_id)
-                        })
-                new.update({"tags": tags_to_add})
+            tags_to_add = []
+            if misp_id and misp_id in misp_tags:
+                for tag in misp_tags[misp_id]:
+                    tag_id = str(tag["id"])
+                    if tag_id not in tags_dict:
+                        continue
+                    tags_to_add.append({
+                        "tag_name": tag["name"],
+                        "tag_link": options["external_url"] + "/events/index/searchtag:{0}".format(tag_id)
+                    })
+            new.update({"tags": tags_to_add})
             analyses_files.append(new)
 
     if tasks_urls:
