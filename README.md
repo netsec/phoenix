@@ -38,8 +38,6 @@ ls *ovpn|awk -F '.' '{print $1}'|while read line; do mv $line.ovpn $line.conf; d
 
 ```
 
-Ensure 
-
 ### Preparing VMs for Phoenix
 
 ##### Ensure you set your $HOSTNAME properly first, as we generate many things which are dependent on this
