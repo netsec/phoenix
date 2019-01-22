@@ -1,4 +1,7 @@
 # Phoenix Malware Analysis Appliance
+
+[![Join the chat at https://gitter.im/sparkitsphoenix/community](https://badges.gitter.im/sparkitsphoenix/community.svg)](https://gitter.im/sparkitsphoenix/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 ##### We are eager to work with any colleges and universities to help implement Phoenix into their curriculum, especially as it pertains to creating and testing countermeasures.
 ##### If Phoenix helps you win and save money, consider donating to our gear & beer fund: 3N8fx47jEKQ6WUUXeziPrS7d1SpWbj954g
 
