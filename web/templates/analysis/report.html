@@ -2,7 +2,17 @@
 {% load staticfiles %}
 {% load analysis_tags %}
 {% block content %}
-    <nav class="navbar navbar-default" >
+    <nav class="navbar navbar-default" role="navigation">
+     <div class="navbar-header navbar-default navbar-light bg-light">
+            <button class="navbar-toggle" type="button" data-toggle="collapse" data-target="#overview-nav">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+             <h4 class="navbar-text brand visible-xs-*">Analysis Components</h4>
+        </div>
+    <nav class="navbar-default collapse navbar-collapse bs-navbar-collapse" id="overview-nav" >
         <ul class="nav nav-pills navbar-nav">
             <li class="active"><a href="#overview" data-toggle="tab">
                 <span class="glyphicon glyphicon-list" aria-hidden="true"></span>
@@ -57,8 +67,8 @@
                 Admin</a>
             </li>
         </ul>
-    </div>
-</div>
+    </nav>
+</nav>
 
 <div class="tab-content content" style="margin-top: -15px;">
     <div class="tab-pane fade in active" id="overview">

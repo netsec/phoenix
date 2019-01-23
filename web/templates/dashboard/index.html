@@ -1,44 +1,171 @@
 {% extends "base.html" %}
 {% load staticfiles %}
 {% block content %}
-<div class="alert alert-info" style="text-align: center;font-size: 22px;">
-    Estimating ~<b>{{report.estimate_hour}}</b> analysis per hour, <b>{{report.estimate_day}}</b> per day.
-</div>
+    <script type="text/JavaScript">setTimeout("location.reload(true);", 10000);</script>
+    <div class="alert alert-info" style="text-align: center;font-size: 22px;">
+        Total: <b>{{ report.all_time_tasks }}</b> Reported: <b>{{ report.all_time_reported }}</b> Last 24 hours:
+        ~<b>{{ report.estimate_hour }}</b> analysis per hour, <b>{{ report.estimate_day }}</b> per day.
+    </div>
 
-<div class="row">
-    <div class="col-xs-6">
-        <div class="jumbotron" style="text-align: center;">
-            <h1>{{report.total_tasks}}</h1>
-            Total tasks
+    {% comment %}<div class="row">
+        <div class="col-xs-6">
+            <div class="jumbotron" style="text-align: center;">
+                <h1>{{ report.total_tasks }}</h1>
+                Total tasks
+            </div>
+        </div>
+        <div class="col-xs-6">
+            <div class="jumbotron" style="text-align: center;">
+                <h1>{{ report.total_samples }}</h1>
+                Total samples
+            </div>
+        </div>
+    </div>{% endcomment %}
+    <div class="row">
+        <div class="col-xs-6">
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Tags</h3>
+                </div>
+                <div class="table-responsive">
+                    <div id="tagsTable">
+
+                        <table class="table table-striped">
+                            <thead>
+                            <tr>
+                                <th>Tag Name</th>
+                                <th>Objects</th>
+                                <th>Attributes</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for item in tags %}
+                                <tr>
+                                    <td><a href="{{ misp_external_url }}/events/index/searchtag:{{ item.id }}"
+                                           target="_blank" class=tag
+                                           style="background-color:{{ item.colour }}">{{ item.name }}</a></td>
+                                    <td>{{ item.count }}</td>
+                                    <td><a href="{{ misp_external_url }}/attributes/search/attributetag:{{ item.id }}"
+                                           target="_blank">{{ item.attribute_count }}</a></td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xs-6">
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <h3 class="panel-title alignleft">States</h3>
+                    <h3 class="panel-title aligncenter">Tasks: {{ report.total_tasks }}</h3>
+                    <h3 class="panel-title alignright">Samples: {{ report.total_samples }}</h3>
+                    <div style="clear: both;"></div>
+                </div>
+                <table class="table table-striped" style="table-layout: fixed;">
+                    <thead>
+                    <tr>
+                        <th>State</th>
+                        <th>Count</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for state, count in report.states_count.items %}
+                        <tr>
+                            <td>{{ state }}</td>
+                            <td>{{ count }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+
+            </div>
+        </div>
+        <div class="col-xs-6">
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Moloch Links</h3>
+
+                </div>
+                <table class="table table-striped" style="table-layout: fixed;">
+                    <thead>
+                    <tr>
+                        <th>Search</th>
+                        <th>72 Hours</th>
+                        <th>1 Week</th>
+                        <th>1 Month</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>Binaries Downloaded</td>
+                        <td><a target="_blank"
+                               href="{{ moloch_external_url }}/spiview?date=72&expression=http.bodymagic%20%3D%3D%20application%2Foctet-stream%20%7C%7C%20http.bodymagic%20%3D%3D%20application%2Fx-dosexec">SPI</a>
+                            |
+                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=72&expression=http.bodymagic%20%3D%3D%20application%2Foctet-stream%20%7C%7C%20http.bodymagic%20%3D%3D%20application%2Fx-dosexe&srcField=ho&dstField=hmd5&connLength=1000&minConn=1
+">Connections</a></td>
+                        <td><a target="_blank"
+                               href="{{ moloch_external_url }}/spiview?date=168&expression=http.bodymagic%20%3D%3D%20application%2Foctet-stream%20%7C%7C%20http.bodymagic%20%3D%3D%20application%2Fx-dosexec">SPI</a>
+                            |
+                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=168&expression=http.bodymagic%20%3D%3D%20application%2Foctet-stream%20%7C%7C%20http.bodymagic%20%3D%3D%20application%2Fx-dosexe&srcField=ho&dstField=hmd5&connLength=1000&minConn=1
+">Connections</a></td>
+                        <td><a target="_blank"
+                               href="{{ moloch_external_url }}/spiview?date=720&expression=http.bodymagic%20%3D%3D%20application%2Foctet-stream%20%7C%7C%20http.bodymagic%20%3D%3D%20application%2Fx-dosexec">SPI</a>
+                            |
+                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=720&expression=http.bodymagic%20%3D%3D%20application%2Foctet-stream%20%7C%7C%20http.bodymagic%20%3D%3D%20application%2Fx-dosexe&srcField=ho&dstField=hmd5&connLength=1000&minConn=1
+">Connections</a></td>
+                    </tr>
+                    <tr>
+                        <td>Hosts & Content Types</td>
+                        <td>
+                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=72&srcField=ho&dstField=http.bodymagic-term&connLength=1000&minConn=1">Connections</a></td>
+                        <td>
+                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=168&srcField=ho&dstField=http.bodymagic-term&connLength=1000&minConn=1">Connections</a></td>
+                        <td>
+                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=720&srcField=ho&dstField=http.bodymagic-term&connLength=1000&minConn=1">Connections</a></td>
+                    </tr>
+                     <tr>
+                        <td>Hosts & Status Codes</td>
+                        <td>
+                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=72&srcField=ho&dstField=http.statuscode&connLength=1000&minConn=1">Connections</a></td>
+                        <td>
+                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=168&srcField=ho&dstField=http.statuscode&connLength=1000&minConn=1">Connections</a></td>
+                        <td>
+                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=720&srcField=ho&dstField=http.statuscode&connLength=1000&minConn=1">Connections</a></td>
+                    </tr>
+                    <tr>
+                        <td>Certificate Name + JA3</td>
+                        <td>
+                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=72&srcField=tls.alt&dstField=tlsja3-term&connLength=1000&minConn=1&expression=tls.ja3%20%3D%3D%20EXISTS!">Connections</a></td>
+                        <td>
+                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=168&srcField=tls.alt&dstField=tlsja3-term&connLength=1000&minConn=1&expression=tls.ja3%20%3D%3D%20EXISTS!">Connections</a></td>
+                        <td>
+                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=720&srcField=tls.alt&dstField=tlsja3-term&connLength=1000&minConn=1&expression=tls.ja3%20%3D%3D%20EXISTS!">Connections</a></td>
+                    </tr>
+                      <tr>
+                        <td>Certificate Name + Serial</td>
+                        <td>
+                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=72&srcField=tls.alt&dstField=tls.sn&connLength=1000&minConn=1&expression=tls.ja3%20%3D%3D%20EXISTS!">Connections</a></td>
+                        <td>
+                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=168&srcField=tls.alt&dstField=tls.sn&connLength=1000&minConn=1&expression=tls.ja3%20%3D%3D%20EXISTS!">Connections</a></td>
+                        <td>
+                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=720&srcField=tls.alt&dstField=tls.sn&connLength=1000&minConn=1&expression=tls.ja3%20%3D%3D%20EXISTS!">Connections</a></td>
+                    </tr>
+                    </tbody>
+                </table>
+
+            </div>
         </div>
     </div>
-    <div class="col-xs-6">
-        <div class="jumbotron" style="text-align: center;">
-            <h1>{{report.total_samples}}</h1>
-            Total samples
-        </div>
-    </div>
-</div>
-
-<div class="panel panel-primary">
-    <div class="panel-heading">
-        <h3 class="panel-title">States</h3>
-    </div>
-    <table class="table table-striped" style="table-layout: fixed;">
-        <thead>
-        <tr>
-            <th>State</th>
-            <th>Count</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for state, count in report.states_count.items %}
-            <tr>
-                <td>{{state}}</td>
-                <td>{{count}}</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-</div>
+    <script type="text/javascript">
+        $('.tag').each(function () {
+            var rgb = this.style.backgroundColor;
+            var colors = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+            var r = colors[1];
+            var g = colors[2];
+            var b = colors[3];
+            this.style.color = (r * 0.299 + g * 0.587 + b * 0.114) > 120 ? "black" : "white"
+        })
+    </script>
 {% endblock %}

@@ -30,7 +30,7 @@ try:
 except Exception as e:
     raise Exception("Unable to connect to Mongo: %s" % e)
 
-if cfg.elasticsearch.get("enabled"):
+if cfg.elasticsearch:
     try:
         import elasticsearch
     except ImportError:
@@ -59,7 +59,7 @@ from lib.cuckoo.core.startup import init_rooter, init_routing
 init_rooter()
 init_routing()
 
-DEBUG = True
+DEBUG = False
 
 # Database settings. We don't need it.
 # Database settings. We don't need it but Django auth yes.
@@ -160,6 +160,7 @@ TEMPLATES = [
         'OPTIONS': {
             'context_processors': [
                 "django.contrib.auth.context_processors.auth",
+                "django.core.context_processors.request"
             ]
         },
         "APP_DIRS": True,
@@ -182,8 +183,9 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
-    'analysis',
+    'djangojs','analysis',
     'compare',
+
 )
 LOGIN_URL = "/login"
 LOGIN_REDIRECT_URL = "/"
@@ -240,6 +242,7 @@ ANALYSES_PREFIX = os.path.join(CUCKOO_PATH,'storage','analyses')
 YARA_DOCKER_IMAGE = 'prodyara'
 SURICATA_DOCKER_IMAGE = 'prodsuricata'
 MAX_SURICATA_WORKERS = processing_config.suricata.get("max_suricata_workers")
+MAX_YARA_WORKERS = processing_config.yara.get("max_yara_workers", 8)
 
 # Hack to import local settings.
 try:

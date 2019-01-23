@@ -2229,7 +2229,7 @@ function buildSessionQuery(req, buildCb) {
                     setTimeout(function () {
                         reject("No logged in user");
                     }, 1);
-                request(Config.get("cuckoo_api_url") + req.user.userId
+                request(Config.get("cuckoo_api_url") + req.user.userId+"/"+req.query.startTime+"/"+req.query.stopTime
                     , function (error, response, body) {
                         resolve(body);
                     })

@@ -66,7 +66,7 @@ class ProcessMemory(Processing):
 
     def create_idapy(self, process):
         i = open(process["file"], "rb")
-        o = open(process["file"].replace(".dmp", ".py"), "wb")
+        o = open(process["file"].replace(".dmp", ".py"), "wb+")
 
         print>>o, "from idaapi import add_segm, mem2base, autoMark, AU_CODE"
         print>>o, "from idaapi import set_processor_type, SETPROC_ALL"
@@ -98,7 +98,7 @@ class ProcessMemory(Processing):
             if type_ == "CODE":
                 print>>o, "autoMark(%s, AU_CODE)" % region["addr"]
         o.seek(0)
-        with gzip.open(process["file"].replace(".dmp", ".py.gz"), 'wb') as f_out:
+        with gzip.open(process["file"].replace(".dmp", ".py.gz"), 'wb+') as f_out:
             f_out.writelines(o)
         os.remove(process["file"].replace(".dmp", ".py"))
 

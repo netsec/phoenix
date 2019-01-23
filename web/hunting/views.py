@@ -6,22 +6,25 @@ import mimetypes
 import os
 import json
 import shutil
+import random
 import sys
 import traceback
 import uuid
+import cProfile
 from datetime import datetime
 from time import time
 
 import docker
 from django.conf import settings
+from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from django.shortcuts import render
 from django.views.decorators.http import require_safe
 from elasticsearch import Elasticsearch
 from helpers import convert_hit_to_template
-from web.tlp_methods import get_tlp_users, create_tlp_query, get_analyses_numbers_matching_tlp
+from web.tlp_methods import get_tlp_users, create_tlp_query, get_analyses_numbers_matching_tlp2
 
 sys.path.insert(0, settings.CUCKOO_PATH)
 # analyses_prefix =
@@ -68,16 +71,62 @@ def index(request):
 def report(request, task_id=None):
     if not task_id:
         return render(request, "hunting/index.html")
+    #
+    # query = create_tlp_query(request.user, {"term": {"uuid.raw": task_id}})
+    # record = es.search(index="hunt-*", body=query)
+    list_images = os.listdir(os.path.join(os.path.dirname(__file__), "../static/img/loader_gifs"))
+    image = random.choice(list_images)
+    return render(request, "hunting/report.html", {'loading_image': image})
+    # {'results': [convert_hit_to_template(c) for c in record['hits']['hits']]})
 
+
+def get_hunt_data(request, task_id):
     query = create_tlp_query(request.user, {"term": {"uuid.raw": task_id}})
     record = es.search(index="hunt-*", body=query)
-    return render(request, "hunting/report.html",
-                  {'results': [convert_hit_to_template(c) for c in record['hits']['hits']]})
+    es_hits = [convert_hit_to_template(c) for c in record['hits']['hits']]
+    id_set = set()
+    for hit in es_hits:
+        id_set.add(hit["analysis_id"])
+    mongo_results = {str(x["info"]["id"]): x for x in getMongoObj(list(id_set))}
+
+    for hit in es_hits:
+        http_recs = []
+        analysis_id = hit["analysis_id"]
+        if analysis_id not in mongo_results:
+            continue
+        mongo_object = mongo_results[analysis_id]
+        if "network" in mongo_object:
+            if "https_ex" in mongo_object["network"]:
+                http_recs += mongo_object["network"]["https_ex"]
+            if "http_ex" in mongo_object["network"]:
+                http_recs += mongo_object["network"]["http_ex"]
+        mongo_result = next(
+            (result for result in http_recs if straight_match(result, hit) or reverse_match(result, hit)), None)
+        if mongo_result:
+            hit["uri"] = mongo_result.get("protocol") + "://" + mongo_result.get("host") + mongo_result.get("uri")
+            hit["method"] = mongo_result.get("method")
+            hit["link_url"] = reverse("moloch",
+                                      kwargs={"src_ip": mongo_result.get("src"), "src_port": mongo_result.get("sport"),
+                                              "dst_ip": mongo_result.get("dst"),
+                                              "dst_port": mongo_result.get("dport"), "date": "4380"})
+    return JsonResponse({"results": es_hits})
+
+
+def reverse_match(mobj, hit):
+    return mobj["sport"] == hit["dest_port"] and mobj["dport"] == hit["src_port"] and mobj["src"] == hit["dest_ip"] and \
+           mobj["dst"] == hit["src_ip"]
+
+
+def straight_match(mobj, hit):
+    return mobj["sport"] == hit["src_port"] and mobj["dport"] == hit["dest_port"] and mobj["src"] == hit["src_ip"] and \
+           mobj["dst"] == hit["dest_ip"]
 
 
 @login_required
 def submit(request):
     print "Submit"
+    # pr = cProfile.Profile()
+    # pr.enable()
     try:
         suriFiles = request.FILES.getlist("suricataRulesFile")
         yaraFiles = request.FILES.getlist("yaraRulesFile")
@@ -89,9 +138,9 @@ def submit(request):
 
         client = docker.DockerClient()
 
-        usersInGroup = get_tlp_users(request.user)
+        # usersInGroup = get_tlp_users(request.user)
         username = request.user.username
-        analyses_numbers = get_analyses_numbers_matching_tlp(username, usersInGroup)
+        analyses_numbers = get_analyses_numbers_matching_tlp2(username)
 
         # analyses = results_db.analysis.find({}, {"info.id": "1"})
         hunting_uuid = os.path.join(analyses_prefix, ".hunting", strUuid)
@@ -107,7 +156,8 @@ def submit(request):
         elif suriFiles:
             suriRuleFile = suriFiles[0]
             kick_off_suricata(analyses_numbers, client, hunting_uuid, strUuid, suriRuleFile, tlp, username)
-
+        # pr.disable()
+        # pr.dump_stats("huntingprofile.pstat")
         return redirect('hunting.views.status', task_id=strUuid)
     except Exception as e:
         return HttpResponse(str(e.message) + " " + str(traceback.format_exc()))
@@ -151,7 +201,6 @@ def kick_off_suricata(analyses_numbers, client, hunting_uuid, strUuid, suriRuleF
                               remove=True)
 
 
-
 def kick_off_yara(analyses_numbers, client, hunting_uuid, strUuid, yaraRuleFile, tlp, username):
     number_set = set(analyses_numbers)
     yara_malware_folder, yara_root_folder, yara_rule_file_path, yara_rules_folder, yara_target_files = get_yara_paths(
@@ -160,66 +209,39 @@ def kick_off_yara(analyses_numbers, client, hunting_uuid, strUuid, yaraRuleFile,
     os.makedirs(yara_malware_folder)
     # write yara rule file to new yara hunt dir
     volumes = {yara_root_folder: {'bind': '/yara', 'mode': 'rw'},
-               analyses_storage: {'bind': analyses_storage, 'mode': 'ro'}}
+               analyses_storage: {'bind': '/analyses', 'mode': 'ro'}}
 
     with open(yara_rule_file_path, 'wb+') as yara_destination:
         for chunk in yaraRuleFile.chunks():
             yara_destination.write(chunk)
 
-    targets = []
+    # targets = []
 
     # create symlinks for all TLP approved files
-    for number in number_set:
-        analysis_folder = os.path.join(analyses_prefix, number)
-        yara_malware_instance_folder = os.path.join(analyses_prefix, number)
-        # yara_malware_instance_folder = os.path.join(yara_malware_folder, number)
-        # os.makedirs(yara_malware_instance_folder)
-        analysis_memory_path = os.path.join(analysis_folder, "memory")
-        if os.path.exists(analysis_memory_path):
-            print analysis_memory_path
-            # volumes[analysis_memory_path] = {'bind': os.path.join(yara_malware_instance_folder, "memory"), 'mode': 'ro'}
-            targets.append(os.path.join(yara_malware_instance_folder, "memory"))
-            # os.symlink(analysis_memory_path, os.path.join(yara_malware_instance_folder, "memory"))
+    slices = chunker(list(number_set), settings.MAX_YARA_WORKERS)
+    for index,slice in enumerate(slices):
+        # os.symlink(analysis_memory_path, os.path.join(yara_malware_instance_folder, "binary"))
+        yara_slice_targets_path = os.path.join(yara_root_folder, "targets")+'_'+str(index)
+        with open(yara_slice_targets_path, 'w+') as target_file:
+            target_file.writelines([line + "\n" for line in slice])
 
-        analysis_buffer_path = os.path.join(analysis_folder, "buffer")
-        if os.path.exists(analysis_buffer_path):
-            print analysis_buffer_path
-            targets.append(os.path.join(yara_malware_instance_folder, "buffer"))
-            # volumes[analysis_buffer_path] = {'bind': os.path.join(yara_malware_instance_folder, "buffer"), 'mode': 'ro'}
-            # os.symlink(analysis_buffer_path, os.path.join(yara_malware_instance_folder, "buffer"))
-
-        analysis_files_path = os.path.join(analysis_folder, "files")
-        if os.path.exists(analysis_files_path):
-            print analysis_files_path
-            # volumes[analysis_files_path] = {'bind': os.path.join(yara_malware_instance_folder, "files"), 'mode': 'ro'}
-            targets.append(os.path.join(yara_malware_instance_folder, "files"))
-            # os.symlink(analysis_files_path, os.path.join(yara_malware_instance_folder, "files"))
-
-        binary_file_path = os.path.join(analysis_folder, "binary")
-        if os.path.exists(binary_file_path):
-            print binary_file_path
-            # volumes[analysis_files_path] = {'bind': os.path.join(yara_malware_instance_folder, "files"), 'mode': 'ro'}
-            targets.append(os.path.join(yara_malware_instance_folder, "binary"))
-            # os.symlink(analysis_memory_path, os.path.join(yara_malware_instance_folder, "binary"))
-    with open(os.path.join(yara_root_folder, "targets"), 'w+') as target_file:
-        target_file.writelines([line + "\n" for line in targets])
-
-    print volumes
-    yara_container = client.containers.run(settings.YARA_DOCKER_IMAGE,
-                                           command="{0} {1} {2} {3} {4} {5} {6}".format(
-                                               "-y {0}".format(yara_rule_file_path),
-                                               "-s {0}".format(yara_target_files),
-                                               "-o {0}".format(username),
-                                               "-t {0}".format(tlp),
-                                               "-u {0}".format(strUuid),
-                                               "-m {0}".format(settings.MONGO_HOST),
-                                               "-e {0}".format(settings.ELASTIC_HOSTS[0])),
-                                           stderr=True,
-                                           labels={'uuid': strUuid},
-                                           volumes=volumes,
-                                           network="docker_phoenix",
-                                           detach=True,
-                                           remove=True)
+        print volumes
+        client.containers.run(settings.YARA_DOCKER_IMAGE,
+                                               command="{0} {1} {2} {3} {4} {5} {6} {7}".format(
+                                                   "-y {0}".format("/yara/rules/yararules.yar"),
+                                                   "-s {0}".format('/yara/targets_'+str(index)),
+                                                   "-o {0}".format(username),
+                                                   "-t {0}".format(tlp),
+                                                   "-u {0}".format(strUuid),
+                                                   "-m {0}".format(settings.MONGO_HOST),
+                                                   "-e {0}".format(settings.ELASTIC_HOSTS[0]),
+                                                   "-i {0}".format(index)),
+                                               stderr=True,
+                                               labels={'uuid': strUuid},
+                                               volumes=volumes,
+                                               network="docker_phoenix",
+                                               detach=True,
+                                               )
 
 
 def get_yara_paths(hunting_uuid):
@@ -233,7 +255,7 @@ def get_yara_paths(hunting_uuid):
 
 @login_required
 def yara_file(request, hunt_uuid):
-    hunting_uuid = os.path.join(analyses_prefix, ".hunting",hunt_uuid)
+    hunting_uuid = os.path.join(analyses_prefix, ".hunting", hunt_uuid)
     yara_malware_folder, yara_root_folder, yara_rule_file_path, yara_rules_folder, yara_target_files = get_yara_paths(
         hunting_uuid)
     with open(yara_rule_file_path, 'rb') as f:
@@ -241,6 +263,18 @@ def yara_file(request, hunt_uuid):
         response['Content-Disposition'] = 'attachment; filename="yararules.yar"'
         return response
 
+@login_required
+def yara_download(request,hunt_result_id, index):
+    result = es.get(index,hunt_result_id)
+    if result:
+        filepath = result["_source"]["raw_filename"]
+        if os.path.exists(filepath):
+            with open(filepath, 'rb') as f:
+                response = HttpResponse(f, mimetypes.guess_type(filepath)[0])
+                response['Content-Disposition'] = 'attachment; filename="{0}"'.format(os.path.basename(filepath))
+                return response
+        else:
+            return HttpResponse("The file was not found at the path in the database.  Please tell the administrator to check ID {0} of index {1}".format(hunt_result_id,index))
 
 @login_required
 def suri_file(request, hunt_uuid):
@@ -262,6 +296,16 @@ def pcap(request, analysis_id):
         return redirect('analysis.views.file', category='pcap', object_id=record["network"]["pcap_id"])
 
 
+def getMongoObj(taskid_list):
+    # TODO: Make Mongo host config-based
+    client = settings.MONGO
+
+    id_list = [int(taskid) for taskid in taskid_list]
+    cursor = client.analysis.find({"info.id": {"$in": id_list}},
+                                  {"network.http_ex": "1", "network.https_ex": "1", "info.id": "1", "_id": "0"})
+    return cursor
+
+
 @login_required
 def status(request, task_id):
     # TODO Create a library for ES stuff to remove duplication
@@ -271,10 +315,22 @@ def status(request, task_id):
     client = docker.APIClient(version='auto')
     containers = client.containers(filters={'label': 'uuid=' + task_id})
     docker_count = len(containers)
+
     if docker_count > 0:
+        progress_data = []
+        if containers[0]["Image"] == settings.YARA_DOCKER_IMAGE:
+            hunt_path = os.path.join(analyses_prefix, ".hunting", task_id, "yara")
+            progress_files = filter(lambda file: file.startswith("progress_"), os.listdir(hunt_path))
+            for index, file in enumerate(progress_files):
+                with open(os.path.join(hunt_path, file), 'r') as progress_file:
+                    progress_data.append("Docker container {0} - {1}".format(index, progress_file.read()))
+            if len(progress_data) < len(containers):
+                for i in range(len(progress_data), len(containers)):
+                    progress_data.append("Docker container {0} still enumerating files".format(i))
         return render(request, "hunting/status.html", {
             "task_id": task_id,
-            "instance_count": docker_count
+            "instance_count": docker_count,
+            "progress_data":progress_data
         })
     return redirect("hunting.views.report", task_id=task_id)
     # return redirect("analysis.views.report", task_id=task_id)

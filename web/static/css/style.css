@@ -52,6 +52,7 @@ footer a:hover {
 }
 .mono {
     font-family: monospace;
+    word-wrap:break-word;
 }
 .content {
     background-color: white;
@@ -135,6 +136,31 @@ a.tag-label {
     margin-bottom: 10px;
 }
 
+.table-striped > tbody > tr:nth-child(2n) > td, .table-striped > tbody > tr:nth-child(2n) > th {
+   background-color: #efefef;
+}
+
+.table-striped > tbody > tr:nth-child(2n+1) > td, .table-striped > tbody > tr:nth-child(2n+1) > th {
+   background-color: white;
+}
+.table-responsive{
+    overflow-x:scroll;
+    width: 100%;
+}
+.fixed-table{
+    border: 1px solid black;
+  table-layout: fixed;
+  width: 100%;
+  height: 200px;
+  border-collapse: collapse;
+  overflow: scroll;
+}
+.loading{
+    max-width:300px;
+}
+.checkmark-column {
+    text-align: center;
+}
 /* Fix the icon tab override */
 .nav-tabs > .active > a > [class^="icon-"],.nav-tabs>.active>a>[class*=" icon-"] { background-image:url("../img/glyphicons-halflings.png") !important; }
 
@@ -247,4 +273,122 @@ td {
 
 .sort_field {
     display: none;
+}
+.vtimage{
+    margin-left:5px;
+}
+.forcewrap{
+    word-wrap:break-word;
+}
+.forcewrap li {
+    word-wrap:break-word;
+}
+.alignleft {
+    float: left;
+    width: 33%;
+    text-align: left;
+}
+.aligncenter {
+    float: left;
+    width: 33%;
+    text-align: center;
+}
+.alignright {
+    float: left;
+    width: 33%;
+    text-align: right;
+}
+.tag {
+	display: inline-block;
+	padding: 2px 4px;
+	/*font-size: 12px;*/
+	line-height: 14px;
+	-webkit-border-radius: 3px;
+	-moz-border-radius: 3px;
+	border-radius: 3px;
+	box-shadow: 3px 3px 3px #888888;
+    background-color: #339900;
+    color: black;
+
+}
+.tag span{
+     mix-blend-mode: difference;
+    font-size: 11pt;
+}
+.dont-break-out {
+
+  /* These are technically the same, but use both */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+
+  -ms-word-break: break-all;
+  /* This is the dangerous one in WebKit, as it breaks things wherever */
+  word-break: break-all;
+  /* Instead use this non-standard one: */
+  word-break: break-word;
+
+  /* Adds a hyphen where the word breaks, if supported (No Blink) */
+  -ms-hyphens: auto;
+  -moz-hyphens: auto;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+
+}
+@media screen and (min-width: 767px) {
+    .outerdiv {
+        padding-left: 30px;
+        padding-right: 30px;
+        padding-top: 20px;
+    }
+}
+@media screen and (max-width: 767px) {
+  .alt-table-responsive {
+    width: 100%;
+    margin-bottom: 15px;
+    overflow-y: hidden;
+    overflow-x: auto;
+    -ms-overflow-style: -ms-autohiding-scrollbar;
+    border: 1px solid #dddddd;
+    -webkit-overflow-scrolling: touch;
+  }
+    .alt-table-responsive table {
+    table-layout: fixed;
+    word-wrap: break-word;
+}
+}
+@media (max-width: 1079px) {
+  .navbar-header {
+      float: none;
+  }
+  .navbar-left,.navbar-right {
+      float: none !important;
+  }
+  .navbar-toggle {
+      display: block;
+  }
+  .navbar-collapse {
+      border-top: 1px solid transparent;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+  }
+  .navbar-fixed-top {
+      top: 0;
+      border-width: 0 0 1px;
+  }
+  .navbar-collapse.collapse {
+      display: none!important;
+  }
+/*  .navbar-nav {
+      float: none!important;
+      margin-top: 7.5px;
+  }
+  .navbar-nav>li {
+      float: none;
+  }
+  .navbar-nav>li>a {
+      padding-top: 10px;
+      padding-bottom: 10px;
+  }*/
+  .collapse.in{
+      display:block !important;
+  }
 }

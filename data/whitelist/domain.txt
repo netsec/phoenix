@@ -12,9 +12,12 @@ beta.visualstudio.net
 bm-corp-00256
 cacerts.digicert.com
 checkip.dyndns.org
+cert.int-x3.letsencrypt.org
 clients1.google.com
 clients2.google.com
 clienttemplates.content.office.net
+cps.letsencrypt.org0
+cps.root-x1.letxencrypt.org0
 crl3.digicert.com
 crl4.digicert.com
 crl.comodoca4.com
@@ -35,6 +38,7 @@ drive.google.com
 ds.download.windowsupdate.com
 evcs-ocsp.ws.symantec.com
 fbstatic-a.akamaihd.net
+html5shiv.googlecode.com
 g2.symcb.com
 gn.symcb.com
 gn.symcd.com
@@ -61,9 +65,11 @@ javadl.sun.com
 java.sun.com
 js.microsoft.com
 launchpad.net
+letsencrypt.org
 login.live.com
 mail.aol.com
 mail.yahoo.com
+maxcdn.bootstrapcdn.com
 msdn.microsoft.com
 mssl-ocsp.ws.symantec.com
 ns.adobe.com
@@ -101,6 +107,7 @@ report-uri.cloudflare.com
 res1.windows.microsoft.com
 res2.windows.microsoft.com
 rps-svcs.sun.com
+rps-svcs.oracle.com
 s1.symcb.com
 s2.symcb.com
 schemas.datacontract.org
@@ -114,6 +121,8 @@ sr.symcd.com
 ss.symcb.com
 ss.symcd.com
 s.symcd.com
+statcounter.com
+www.statcounter.com
 static-hp-eas.s-msn.com
 statuspage-production.s3.amazonaws.com
 support.microsoft.com
@@ -149,10 +158,13 @@ xml.org
 yourjavascript.com
 zenodo.org
 ocsp.int-x3.letsencrypt.org0
+ocsp.int-x3.letsencrypt.org
 cdp1.public-trust.com
 www.public-trust.com
 crl.starfieldtech.com
 assets.zendesk.com
 status.rapidssl.com
 status.geotrust.com
-
+facebook.com
+www.facebook.com
+cdnjs.cloudflare.com

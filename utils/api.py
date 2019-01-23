@@ -3,7 +3,6 @@
 # Copyright (C) 2014-2016 Cuckoo Foundation.
 # This file is part of Cuckoo Sandbox - http://www.cuckoosandbox.org
 # See the file 'docs/LICENSE' for copying permission.
-
 import os
 import sys
 import socket
@@ -11,6 +10,7 @@ import tarfile
 import argparse
 import traceback
 import json
+import csv
 from datetime import datetime
 from StringIO import StringIO
 from zipfile import ZipFile, ZIP_STORED
@@ -21,25 +21,39 @@ except ImportError:
     sys.exit("ERROR: Flask library is missing (`pip install flask`)")
 
 sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), ".."))
+sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", "web"))
 sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", "web", "web"))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 from django.conf import settings
-from web.web.tlp_methods import get_analyses_numbers_matching_tlp
+import django
+import cProfile
+from web.tlp_methods import get_analyses_numbers_matching_tlp2
 from lib.cuckoo.common.constants import CUCKOO_VERSION, CUCKOO_ROOT
+from lib.cuckoo.common.config import Config
 from lib.cuckoo.common.utils import store_temp_file, delete_folder
 from lib.cuckoo.core.database import Database, TASK_RUNNING, Task
 from lib.cuckoo.core.database import TASK_REPORTED, TASK_COMPLETED
 from lib.cuckoo.core.startup import drop_privileges
 from lib.cuckoo.core.rooter import rooter
+from django.contrib.auth.models import User
+from analysis.models import UsageLimits
+from pymisp import PyMISP
 
 # Global Database object.
 db = Database()
+
+config = Config("reporting")
+options = config.get("z_misp")
+misp_url = options["url"]
+misp = PyMISP(misp_url, options["apikey"], False)
 
 # Initialize Flask app.
 app = Flask(__name__)
 domains = set()
 for domain in open(os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", "data", "whitelist", "domain.txt")):
     domains.add(domain.strip())
+
+django.setup()
 
 
 def json_error(status_code, message):
@@ -65,6 +79,12 @@ def custom_headers(response):
 @app.route("/tasks/create/file", methods=["POST"])
 @app.route("/v1/tasks/create/file", methods=["POST"])
 def tasks_create_file():
+    if not request.form.get("owner"):
+        return json_error(400, "User not specified")
+    if not request.form.get("tlp") or request.form.get("tlp") not in ["green", "amber", "red"]:
+        return json_error(400, "TLP must be specified as \"green\", \"amber\", or \"red\"")
+    if not UsageLimits.take_credit(User.objects.get(username=request.form.get("owner", ""))):
+        return json_error(400, "You have exceeded your usage limits")
     data = request.files["file"]
     package = request.form.get("package", "")
     timeout = request.form.get("timeout", "")
@@ -113,6 +133,12 @@ def tasks_create_file():
 @app.route("/tasks/create/url", methods=["POST"])
 @app.route("/v1/tasks/create/url", methods=["POST"])
 def tasks_create_url():
+    if not request.form.get("owner"):
+        return json_error(400, "User not specified")
+    if not request.form.get("tlp") or request.form.get("tlp") not in ["green", "amber", "red"]:
+        return json_error(400, "TLP must be specified as \"green\", \"amber\", or \"red\"")
+    if not UsageLimits.take_credit(User.objects.get(username=request.form.get("owner", ""))):
+        return json_error(400, "You have exceeded your usage limits")
     url = request.form.get("url")
     package = request.form.get("package", "")
     timeout = request.form.get("timeout", "")
@@ -124,7 +150,6 @@ def tasks_create_url():
     custom = request.form.get("custom", "")
     owner = request.form.get("owner", "")
     tlp = request.form.get("tlp", "")
-
 
     memory = request.form.get("memory", False)
     if memory:
@@ -154,6 +179,18 @@ def tasks_create_url():
     )
 
     return jsonify(task_id=task_id)
+
+
+@app.route("/feeds/<string:tag_name>/url")
+@app.route("/feeds/<string:tag_name>/url/<int:hours>")
+def url_feed(tag_name, hours):
+    try:
+        data = misp.search(controller="attributes", type_attribute="url", tags=[tag_name],
+                           last="{0}h".format(hours if hours else 1))
+        output = set(map(lambda data_item: data_item["value"], data["response"]["Attribute"]))
+        return "\n".join(map(lambda url: "{0},{1}".format(tag_name, url), output))
+    except Exception as ex:
+        return json_error('400', ex.message)
 
 
 @app.route("/tasks/list")
@@ -596,19 +633,27 @@ def vpn_status():
     return jsonify({"vpns": status})
 
 
-@app.route("/tlp/<string:username>")
-def get_analyses_numbers_for_tlp(username):
+@app.route("/tlp/<string:username>/<int:startTime>/<int:stopTime>")
+def get_analyses_numbers_for_tlp(username, startTime, stopTime):
+    # pr = cProfile.Profile()
+    # pr.enable()
     print "called with " + username
     try:
-        analyses_nums = get_analyses_numbers_matching_tlp(username, list(set(db.get_groups_for_tlp(username)+[username])))
+        analyses_nums = get_analyses_numbers_matching_tlp2(username,
+                                                           datetime.fromtimestamp(float(startTime)),
+                                                           datetime.fromtimestamp(float(stopTime)))
         forced_expr = "(tags == [" + ",".join(["cuckoo:" + analyses_num for analyses_num in analyses_nums]) + "])"
-        ## To ignore whitelisted domains leave line below uncommented
+        # To ignore whitelisted domains leave line below uncommented
+        # TODO: Read ignored networks from config file
         forced_expr += " && (ip.dst != [10.200.0.255,224.0.0.252,239.255.255.250]) && (host != [" + ",".join(
             domains) + "])"
+        # pr.disable()
+        # pr.dump_stats("apiprofile.pstat")
         return str(forced_expr)
     except Exception as e:
         print e
         traceback.print_exc()
+        return json_error(500, "TLP query failed, check API log")
 
 
 if __name__ == "__main__":

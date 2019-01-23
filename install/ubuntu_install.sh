@@ -90,7 +90,7 @@ DOCKER_MISP_DIR="/ssd/misp/db"
 DOCKER_MISP_BACKUP_DIR="/ssd/misp/backup"
 # This might need to remain hardcoded for installs
 DOCKER_MISP_API="6OkrVL8vHZHfOdY08h6lLYXHQK4cox1ymfHkQ4s4"
-DOCKER_POSTFIX_HOST="23.31.159.194"
+DOCKER_POSTFIX_HOST="0.0.0.0"
 DOCKER_MISP_MYSQL_USER="phoenix"
 DOCKER_MISP_MYSQL_PASSWORD="password"
 
@@ -221,7 +221,7 @@ apt-get upgrade -y
 ## Check your version dependencies... once or twice...
 echo "Installing dependencies"
 
-apt-get install -y git fail2ban openvpn apache2 wget curl uuid-dev libmagic-dev pkg-config g++ flex bison zlib1g-dev libffi-dev gettext libgeoip-dev make libjson-perl libbz2-dev libwww-perl libpng-dev xz-utils libffi-dev iptables-persistent build-essential libssl-dev python-dev libxml2-dev libxslt-dev libtiff5-dev libjpeg8-dev zlib1g-dev libfreetype6-dev liblcms2-dev libwebp-dev tcl8.6-dev tk8.6-dev python-tk libmysqlclient-dev libpcre3-dbg libpcre3-dev autoconf automake libtool libpcap-dev libnet1-dev libyaml-dev zlib1g-dev libcap-ng-dev libmagic-dev libjansson-dev libjansson4 python-pip suricata yara htop nmon apparmor-utils tcpdump volatility mysql-client python python-yaml python-mysqldb python-psycopg2 lm-sensors netcat zlib1g-dev uuid-dev libmnl-dev gcc make autoconf autoconf-archive autogen automake pkg-config sysfsutils unzip rsyslog rsyslog-mmnormalize liblognorm-dev rsyslog-elasticsearch sqlite3 mongodb-clients curl python python-pip apt-transport-https libseccomp2 aufs-tools cgroupfs-mount cgroup-lite pigz ethtool uuid-runtime tesseract-ocr lsof
+apt-get install -y git fail2ban openvpn apache2 wget curl uuid-dev libmagic-dev pkg-config g++ flex bison zlib1g-dev libffi-dev gettext libgeoip-dev make libjson-perl libbz2-dev libwww-perl libpng-dev xz-utils libffi-dev iptables-persistent build-essential libssl-dev python-dev libxml2-dev libxslt-dev libtiff5-dev libjpeg8-dev zlib1g-dev libfreetype6-dev liblcms2-dev libwebp-dev tcl8.6-dev tk8.6-dev python-tk libmysqlclient-dev libpcre3-dbg libpcre3-dev autoconf automake libtool libpcap-dev libnet1-dev libyaml-dev zlib1g-dev libcap-ng-dev libmagic-dev libjansson-dev libjansson4 python-pip suricata yara htop nmon apparmor-utils tcpdump volatility mysql-client python python-yaml python-mysqldb python-psycopg2 lm-sensors netcat zlib1g-dev uuid-dev libmnl-dev gcc make autoconf autoconf-archive autogen automake pkg-config sysfsutils unzip rsyslog rsyslog-mmnormalize liblognorm-dev rsyslog-elasticsearch sqlite3 mongodb-clients curl python python-pip apt-transport-https libseccomp2 aufs-tools cgroupfs-mount cgroup-lite pigz ethtool uuid-runtime tesseract-ocr lsof libfuzzy-dev
 
 echo "Grabbing python requirements"
 pip install --upgrade pip
@@ -338,11 +338,11 @@ mkdir -p "${DOCKER_MONGO_DIR}/etc"
 mkdir -p "${DOCKER_ELASTIC_DIR}"
 mkdir -p "${DOCKER_MISP_DIR}"
 mkdir -p "${DOCKER_MISP_BACKUP_DIR}"
-chown 1000.1000 ${DOCKER_ELASTIC_DIR}
+chown -R 1000.1000 ${DOCKER_ELASTIC_DIR}
 
 ## pre-make Grafana folder - change this to named volume later
 mkdir -p $DOCKER_GRAFANA_DIR
-chown 472.472 $DOCKER_GRAFANA_DIR
+chown -R 472.472 $DOCKER_GRAFANA_DIR
 
 ## Stage your mongo config and stats
 /bin/cp -f "mongodb/mongod.conf" "${DOCKER_MONGO_DIR}/etc"
@@ -528,7 +528,7 @@ if [ $? -eq 1 ]; then
     adduser "${CUCKOO_USER}" --gecos "" --disabled-password
     if [ ! -d "$VMSTORAGE" ]; then
         mkdir -p $VMSTORAGE
-        chown $CUCKOO_USER.$CUCKOO_USER $VMSTORAGE
+        chown -R $CUCKOO_USER.$CUCKOO_USER $VMSTORAGE
     fi
 fi
 chown -R "${CUCKOO_USER}.${CUCKOO_USER}" "${CUCKOODIR}"
@@ -591,6 +591,7 @@ fi
 setup_apache2() {
 ## Add admin apache2 account
 htpasswd -b -c /etc/apache2/.admin_htpasswd "$APACHE2_ADMIN_USER" "$APACHE2_ADMIN_PASS"
+htpasswd -b -c /etc/apache2/.cuckoo "$APACHE2_ADMIN_USER" "$APACHE2_ADMIN_PASS"
 
 ##TODO this is not tested yet
 ## If you use our configuration you have to maintain your backend cuckooweb port in httpd/cuckoo.conf
@@ -626,6 +627,27 @@ replace_templates "${CUCKOODIR}/conf/*"
 
 ##TODO remove /etc/init.d/functions from init.d scripts
 touch /etc/init.d/functions
+}
+
+setup_mongo(){
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'info.ended':-1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'info.id':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'info.started':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'procmemory.extracted.sha1':-1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'procmemory.extracted.sha1':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'network.http_ex.sha1':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'network.https_ex.sha1':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'procmemory.extracted.sha256':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'target.file.sha256':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'dropped.sha256':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'info.tlp':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'info.owner':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'info.started':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'network.dns.request':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'network.http_ex.host':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'network.https_ex.host':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'target.file.sha1':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'network.domains.domain':1})\""
 }
 
 setup_moloch() {
@@ -683,7 +705,7 @@ echo "##### Installing OVAs/VMs #####"
 if [ -d "$VMSTORAGE" ]; then
     VBOXDIR="$VMSTORAGE"
     su - $CUCKOO_USER -c "vboxmanage setproperty machinefolder $VMSTORAGE"
-    chown $CUCKOO_USER.$CUCKOO_USER $VMSTORAGE
+    chown -R $CUCKOO_USER.$CUCKOO_USER $VMSTORAGE
 else
     VBOXDIR=$(su - $CUCKOO_USER -c "vboxmanage list systemproperties|grep \"Default machine folder:\"|awk -F 'Default machine folder:' '{print $2}'|sed -e 's/^          //g'")
 fi
@@ -726,7 +748,7 @@ echo "##### Setting up OpenVPN #####"
 if ! ls "${OPENVPN}/*.conf" >> /dev/null 2>&1; then
     cp openvpn/* "${OPENVPN}"/
     update-rc.d openvpn defaults
-    echo -e "[vpn]\nenabled = yes\n" > $CUCKOODIR/conf/vpn.conf
+    echo -e "[vpn]\nenabled = no\n" > $CUCKOODIR/conf/vpn.conf
     echo "vpns = $(ls openvpn/*.conf|sed 's/\.conf//g'|tr '\n' ','|sed 's/openvpn\///g'|sed 's/.$//g')" >> $CUCKOODIR/conf/vpn.conf
     VPNARRAY=$(grep dev openvpn/*.conf|awk '{print $NF}'|tr '\n' ' '|sed 's/.$//g')
     sed -i "s/REPLACEVPNS/\"$VPNARRAY\"/g" "$CUCKOODIR/utils/crontab/root/openvpn_route.sh"
@@ -769,13 +791,16 @@ sleep 10
 
 ## Make logging dir
 mkdir -p /var/log/cuckoo
-chown $CUCKOO_USER.$CUCKOO_USER /var/log/cuckoo
+chown -R $CUCKOO_USER.$CUCKOO_USER /var/log/cuckoo
 
 ## Update cuckoo bins and sigs
 python ../utils/community.py -waf
 
 ## Update cuckoo web db
 /etc/init.d/cuckoorooter restart
+python ../web/manage.py makemigrations auth
+python ../web/manage.py migrate auth
+python ../web/manage.py makemigrations
 python ../web/manage.py migrate
 
 ## Superseded by setup_user.py
@@ -862,7 +887,7 @@ echo "##### Setting up storage #####"
 }
 
 hosts_file() {
-    OUTSIDE_INT=$(ifconfig|grep en|awk '{print $1}'|while read int; do ifconfig $int |grep 'inet '|awk -F ':' '{print $2}'|awk '{print $1}'; done)
+    OUTSIDE_INT=$(route | grep '^default'|grep 0.0.0.0|awk '{print $NF}')
 }
 
 ## Sometimes you don't know how much work goes into a system until you actually document how it works...
@@ -883,6 +908,7 @@ setup_fail2ban
 setup_certificates
 setup_apache2
 setup_cuckoo_daemons
+setup_mongo
 setup_moloch
 setup_misp
 install_vms

@@ -12,6 +12,10 @@ import argparse
 import signal
 import multiprocessing
 import traceback
+from functools import partial
+
+# from pathos.helpers import ThreadPool
+from multiprocessing.pool import ThreadPool
 
 sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), ".."))
 
@@ -52,7 +56,8 @@ def process_wrapper(*args, **kwargs):
 def init_worker():
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-def autoprocess(parallel=1):
+
+def autoprocess(parallel=8):
     maxcount = cfg.cuckoo.max_analysis_count
     count = 0
     db = Database()
@@ -119,19 +124,21 @@ def autoprocess(parallel=1):
             # No new tasks, we can wait a small while before we query again
             # for new tasks.
             if not tasks:
-                time.sleep(5)
+                time.sleep(2)
                 continue
 
             for task in tasks:
-                # Ensure that this task is not already in the pending list.
-                # This is really mostly for debugging and should never happen.
-                assert task.id not in pending_results
+                if task.id in pending_results:
+                    continue
 
                 log.info("Task #%d: queueing for reporting", task.id)
 
                 if task.category == "file":
                     sample = db.view_sample(task.sample_id)
-
+                    if not sample:
+                        log.critical("Task {0}: Sample {1} not found in db".format(task.id, task.sample_id))
+                        db.set_status(task.id, TASK_FAILED_PROCESSING)
+                        continue
                     copy_path = os.path.join(CUCKOO_ROOT, "storage",
                                              "binaries", sample.sha256)
                 else:
@@ -143,16 +150,38 @@ def autoprocess(parallel=1):
                     "auto": True,
                     "task": dict(task.to_dict()),
                 }
-                result = pool.apply_async(process_wrapper, args, kwargs)
+                abortable_func = partial(abortable_worker, process_wrapper,orig_kwargs = kwargs, timeout=cfg.processing.processing_timeout, task_id=task.id)
+                result = pool.apply_async(abortable_func, args, kwargs)
                 pending_results[task.id] = result
     except KeyboardInterrupt:
         pool.terminate()
         raise
     except:
-        log.exception("Caught unknown exception")
+        log.exception("Caught exception in processing loop")
     finally:
         pool.close()
         pool.join()
+
+
+def abortable_worker(func, *args, **kwargs):
+    log.info("Timeout was passed as {0}".format(kwargs.get('timeout', None)))
+    timeout = kwargs.get('timeout', 600)
+    task_id = kwargs.get('task_id', "Not specified")
+    # db = kwargs.get('database_conn', None)
+    # pending_results = kwargs.get('pending_results', None)
+    p = ThreadPool(1)
+    res = p.apply_async(func, args=args, kwds=kwargs.get("orig_kwargs",None))
+    try:
+        out = res.get(timeout)  # Wait timeout seconds for func to complete.
+        return out
+    except multiprocessing.TimeoutError:
+        log.critical("Task#{0}: Aborting due to timeout".format(task_id))
+        p.terminate()
+        raise Exception("Task#{0} timed out".format(task_id))
+        # db.set_status(task_id,TASK_FAILED_PROCESSING)
+        # pending_results.pop(task_id)
+
+
 
 def main():
     global log

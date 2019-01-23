@@ -13,16 +13,16 @@
 
 # Source function library.
 . /etc/init.d/functions
-PROGNAME="api.py"
+PROGNAME="api_wsgi"
 NAME="cuckooapi"
 DROPUSER="CUCKOO_USER"
 MYHOMEDIR="CUCKOODIR/utils"
 LOGFILE="/var/log/cuckoo/api.log"
-OPTIONS="-H 127.0.0.1 -p 8090"
+OPTIONS="-w 16 --bind 127.0.0.1:8090"
 
 start() {
         echo "Starting $PROGNAME: "
-	su - $DROPUSER -c "cd $MYHOMEDIR ; python2.7 $PROGNAME $OPTIONS >> $LOGFILE 2>&1 &"
+	su - $DROPUSER -c "cd $MYHOMEDIR ; gunicorn $OPTIONS $PROGNAME >> $LOGFILE 2>&1 &"
 }
 
 stop() {

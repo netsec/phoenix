@@ -575,8 +575,12 @@ class Scheduler(object):
     assigned analysis machine.
     """
     def __init__(self, maxcount=None):
+
+        self.water_gate = False
         self.running = True
         self.cfg = Config()
+        self.low_watermark = int(self.cfg.cuckoo.low_watermark)
+        self.high_watermark = int(self.cfg.cuckoo.high_watermark)
         self.db = Database()
         self.maxcount = maxcount
         self.total_analysis_count = 0
@@ -729,11 +733,31 @@ class Scheduler(object):
 
             # Exits if max_analysis_count is defined in the configuration
             # file and has been reached.
-            if self.maxcount and self.total_analysis_count >= self.maxcount:
-                if active_analysis_count <= 0:
-                    log.debug("Reached max analysis count, exiting.")
-                    self.stop()
+            # if self.maxcount and self.total_analysis_count >= self.maxcount:
+            #     if active_analysis_count <= 0:
+            if self.maxcount and active_analysis_count >= self.maxcount:
+                # if active_analysis_count <= 0:
+                #     log.debug("Reached max analysis count, exiting.")
+                #     self.stop()
                 continue
+
+            # wait for the semaphore to give us more analyses
+            completed_count = self.db.count_tasks(status=TASK_COMPLETED)
+            if self.water_gate:  # it happened, okay?
+                if completed_count < self.low_watermark:
+                    self.m_log("Water gate is closed and semaphore below low watermark, opening gate",completed_count)
+                    self.water_gate = False
+                else:
+                    continue
+            else:
+                if completed_count < self.high_watermark:
+                    self.m_log("Water gate is open and semaphore below high watermark",completed_count)
+
+                    if completed_count >= self.high_watermark:
+                        self.m_log("Water gate is open and semaphore reached watermark. Closing gate",completed_count)
+                        self.water_gate = True
+                else:
+                    continue
 
             # Fetch a pending analysis task.
             # TODO This fixes only submissions by --machine, need to add
@@ -743,6 +767,7 @@ class Scheduler(object):
             # selected machine onto the Analysis Manager instance.
             task, available = None, False
             for machine in self.db.get_available_machines():
+                log.info("Machine {0} is available, fetching one task".format(machine.name))
                 task = self.db.fetch(machine=machine.name)
                 if task:
                     break
@@ -754,14 +779,17 @@ class Scheduler(object):
             # machines is not a "service" machine (again, please refer to the
             # services auxiliary module for more information on service VMs).
             if not task and available:
+                log.info("Fetching a task in service section")
                 task = self.db.fetch(service=False)
 
             if task:
+
+                self.total_analysis_count += 1
+
                 log.debug("Processing task #%s", task.id, extra={
                     "action": "task", "status": "start", "task_id": task.id,
                 })
-                self.total_analysis_count += 1
-
+               
                 # Initialize and start the analysis manager.
                 analysis = AnalysisManager(task.id, errors)
                 analysis.daemon = True
@@ -774,3 +802,6 @@ class Scheduler(object):
                 pass
 
         log.debug("End of analyses.")
+
+    def m_log(self, message, completed_count):
+        log.debug(message + " Water Gate: {0}, Low Watermark: {1}, High Watermark: {2}, Current completed count: {3}, Object ID: {4}".format("Closed" if self.water_gate else "Open", self.low_watermark, self.high_watermark,completed_count , id(self)))

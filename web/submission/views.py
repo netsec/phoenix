@@ -14,6 +14,9 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.core.exceptions import ObjectDoesNotExist
 
+
+from analysis.models import UsageLimits
+
 sys.path.insert(0, settings.CUCKOO_PATH)
 
 from lib.cuckoo.common.config import Config, parse_options, emit_options
@@ -130,12 +133,18 @@ def index(request, task_id=None, sha1=None):
     db = Database()
     task_ids = []
     task_machines = get_task_machines(db, machine)
-
+    credit = UsageLimits.get_credit(request.user)
+    if credit <= 0:
+        return render(request, "error.html", {
+            "error": "You have exceeded your daily usage.  Please try again tomorrow or request a limit increase",
+        })
     # In case of resubmitting a file.
     if request.POST.get("category") == "file":
         task = Database().view_task(task_id)
 
         for entry in task_machines:
+            if not UsageLimits.take_credit(request.user):
+                break
             task_id = db.add_path(file_path=task.target,
                                   package=package,
                                   timeout=timeout,
@@ -156,6 +165,8 @@ def index(request, task_id=None, sha1=None):
         if request.FILES.getlist("sample"):
             samples = request.FILES.getlist("sample")
             for sample in samples:
+                if not UsageLimits.take_credit(request.user):
+                    break
                 # Error if there was only one submitted sample and it's empty.
                 # But if there are multiple and one was empty, just ignore it.
                 if not sample.size:
@@ -173,6 +184,7 @@ def index(request, task_id=None, sha1=None):
                 # Moving sample from django temporary file to Cuckoo temporary
                 # storage to let it persist between reboot (if user like to
                 # configure it in that way).
+
                 path = store_temp_file(sample.read(), sample.name)
                 paths.append(path)
         elif request.POST["vt_apikey"]:
@@ -183,7 +195,8 @@ def index(request, task_id=None, sha1=None):
                     "error": "You must supply a VT API Key.",
                 })
             for vt_hash in request.POST["vt_hashes"].split():
-
+                if not UsageLimits.take_credit(request.user):
+                    break
                 params = {'apikey': vt_key, 'hash': vt_hash}
                 response = requests.get(processing_cfg.virustotal.get("downloadurl"), params=params)
                 try:
@@ -203,7 +216,10 @@ def index(request, task_id=None, sha1=None):
                     "error": "You must supply a ReversingLabs Token."
                 })
             for rl_hash in request.POST["rl_hashes"].split():
+                if not UsageLimits.take_credit(request.user):
+                    break
                 response = requests.get("https://a1000.reversinglabs.com/api/samples/"+rl_hash+"/download/", headers={"Authorization":"Token %s" % rl_token})
+
                 try:
                     response.raise_for_status()
                     path = store_temp_file(response.content, rl_hash)
@@ -238,6 +254,8 @@ def index(request, task_id=None, sha1=None):
         filepath = dropped_filepath(task_id, sha1)
 
         for entry in task_machines:
+            if not UsageLimits.take_credit(request.user):
+                break
             task_id = db.add_path(file_path=filepath,
                                   package=package,
                                   timeout=timeout,
@@ -261,6 +279,8 @@ def index(request, task_id=None, sha1=None):
             })
 
         for entry in task_machines:
+            if not UsageLimits.take_credit(request.user):
+                break
             task_id = db.add_url(url=url,
                                  package=package,
                                  timeout=timeout,
@@ -282,6 +302,7 @@ def index(request, task_id=None, sha1=None):
             "tasks": task_ids,
             "tasks_count": tasks_count,
             "baseurl": request.build_absolute_uri('/')[:-1],
+            "creditsleft": UsageLimits.get_credit(request.user)
         })
     else:
         return render(request, "error.html", {
