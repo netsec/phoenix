@@ -243,7 +243,7 @@ optional arguments:
                         Groups to add the email to - comma separated
 ```
 ```
-python /opt/phoenix/utils/setup_user.py -e JoeBlow@yourdomain.com -g "SecOps,CyberIntel"
+python /opt/phoenix/utils/setup_user.py -g SecOps -g CyberIntel JoeBlow@yourdomain.com 
 ```
 ##### With users and groups setup, you can start submitting files, and enjoying your Phoenix install
 ##### To programmatically submit files from [Reversing Labs](https://www.reversinglabs.com) or [Virus Total](https://virustotal.com) take a look at `/opt/phoenix/utils/auto_submit.py`

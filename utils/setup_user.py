@@ -99,7 +99,7 @@ Please report all bugs to me with the subject line of 'Phoenix Bugs'.''')
 def main():
     parser = argparse.ArgumentParser(description='Phoenix user add script')
     parser.add_argument("email", help='Email to add')
-    parser.add_argument('-g', '--groups', nargs='+', help='Groups to add the email to - space separated')
+    parser.add_argument('-g', '--group', dest='groups', action='append', default=[], help='One group to add the email to (can be used multiple times')
     parser.add_argument('-p', '--password', help='Optional, set the password manually')
     settings = parser.parse_args()
     email = settings.email
