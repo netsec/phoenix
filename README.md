@@ -166,6 +166,8 @@ To export your VMs in a way that the easy-button knows how to import, su to your
 
 ![Setup_MISP2](./install/screencaps/misp2.png)
 
+##### Visit <your misp url>/servers/serverSettings/MISP and change the `MISP.baseurl` to the correct baseurl for your instance.  This will make the links resolve to the correct URL in MISP 
+
 ##### Click on `Admin` in the top right corner.  The API key will need to be copied from here and added to `/opt/phoenix/conf/reporting.conf` under the `[z_misp]` heading.
 
 ![Setup_MISP3](./install/screencaps/misp3.png)
@@ -176,7 +178,7 @@ To export your VMs in a way that the easy-button knows how to import, su to your
 
 ![Setup_MISP5](./install/screencaps/misp5.png)
 
-##### Click on `Administration` -> `Server Settings & Maintenance`, then click on `MISP Settings`.  The only actual option that needs to be change is `live`, but we recommend going through all of the red and yellow MISP values and setting them appropriately.
+##### Click on `Administration` -> `Server Settings & Maintenance`, then click on `MISP Settings`.  The only actual options that need to be changed are `live` and `MISP.baseurl`, but we recommend going through all of the red and yellow MISP values and setting them appropriately.
 
 ![Setup_MISP6](./install/screencaps/misp6.png)
 

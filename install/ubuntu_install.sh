@@ -364,7 +364,7 @@ chmod +x ../utils/mongo_stats.sh
 
 ## Setup the MISP docker container
 LOCALDIR=$PWD
-git clone https://github.com/harvard-itsecurity/docker-misp.git
+#git clone https://github.com/harvard-itsecurity/docker-misp.git
 cd docker-misp
 docker rmi harvarditsecurity/misp
 docker build \
