@@ -166,8 +166,6 @@ To export your VMs in a way that the easy-button knows how to import, su to your
 
 ![Setup_MISP2](./install/screencaps/misp2.png)
 
-##### Visit <your misp url>/servers/serverSettings/MISP and change the `MISP.baseurl` to the correct baseurl for your instance.  This will make the links resolve to the correct URL in MISP 
-
 ##### Click on `Admin` in the top right corner.  The API key will need to be copied from here and added to `/opt/phoenix/conf/reporting.conf` under the `[z_misp]` heading.
 
 ![Setup_MISP3](./install/screencaps/misp3.png)
@@ -247,7 +245,9 @@ optional arguments:
 ```
 python /opt/phoenix/utils/setup_user.py -g SecOps -g CyberIntel JoeBlow@yourdomain.com 
 ```
-##### With users and groups setup, you can start submitting files, and enjoying your Phoenix install
+##### Finally, turn VPNs on in `/opt/phoenix/conf/vpn.conf`
+![VPNConf1](./install/screencaps/vpnconf.PNG)
+##### With users and groups setup, and VPNs turned on, you can start submitting files, and enjoying your Phoenix install
 ##### To programmatically submit files from [Reversing Labs](https://www.reversinglabs.com) or [Virus Total](https://virustotal.com) take a look at `/opt/phoenix/utils/auto_submit.py`
 
 ### Pro Tips:

@@ -97,11 +97,15 @@ def suri_data(request):
     suri_query = create_tlp_query(request.user, {"term": {"_type": "suricata"}})
     es = settings.ELASTIC
     tasks_surihunts = es.search(index="hunt-*", body=suri_query)
+    suri_return = []
     analyses_surihunts = [convert_hit_to_template(c) for c in tasks_surihunts['hits']['hits']]
-    df = pd.DataFrame(analyses_surihunts)
-    df["signature"] = df["alert"].apply(lambda x: x.get("signature"))
+
+    if analyses_surihunts:
+        df = pd.DataFrame(analyses_surihunts)
+        df["signature"] = df["alert"].apply(lambda x: x.get("signature"))
+        suri_return = json.loads(df.groupby(["uuid", "signature"]).first().reset_index().to_json(orient='records'))
     return JsonResponse({
-        "suri_hunts": json.loads(df.groupby(["uuid","signature"]).first().reset_index().to_json(orient='records'))
+        "suri_hunts": suri_return
     })
 
 
@@ -111,11 +115,15 @@ def yara_data(request):
     # TODO: Make this aggregation happen in ES
     # yara_query["aggs"] = {"uuid": {"terms": {"field": "uuid.raw"}, "aggregations": {"rule": {"terms": {"field": "rule.raw"}}}}}
     tasks_yhunts = es.search(index="hunt-*", body=yara_query)
+    yara_return = []
     analyses_yhunts = [convert_hit_to_template(c) for c in tasks_yhunts['hits']['hits']]
-    analyses_yhunts.sort(reverse=True)
-    df = pd.DataFrame(analyses_yhunts)
+
+    if analyses_yhunts:
+        analyses_yhunts.sort(reverse=True)
+        df = pd.DataFrame(analyses_yhunts)
+        yara_return=json.loads(df.groupby(["uuid","rule"]).first().reset_index().to_json(orient='records'))
     return JsonResponse({
-        "yara_hunts": json.loads(df.groupby(["uuid","rule"]).first().reset_index().to_json(orient='records'))
+        "yara_hunts": yara_return
     })
 
 

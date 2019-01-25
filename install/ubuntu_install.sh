@@ -90,7 +90,7 @@ DOCKER_MISP_DIR="/ssd/misp/db"
 DOCKER_MISP_BACKUP_DIR="/ssd/misp/backup"
 # This might need to remain hardcoded for installs
 DOCKER_MISP_API="6OkrVL8vHZHfOdY08h6lLYXHQK4cox1ymfHkQ4s4"
-DOCKER_POSTFIX_HOST="0.0.0.0"
+DOCKER_POSTFIX_HOST="23.31.159.194"
 DOCKER_MISP_MYSQL_USER="phoenix"
 DOCKER_MISP_MYSQL_PASSWORD="password"
 
@@ -666,7 +666,10 @@ if [ -z "$MOLOCHCHECK" ]; then
     /bin/cp -f /etc/pki/tls/private/$HOSTNAME.key /data/moloch/etc/c.key
     /bin/cp -f /etc/pki/tls/certs/ca.crt /data/moloch/etc/c.crt
     /bin/cp -f moloch/viewer.js /data/moloch/viewer/viewer.js
-
+    wget https://s3-us-west-2.amazonaws.com/phoenix-geoip/GeoIP.dat -P /data/moloch/etc
+    wget https://s3-us-west-2.amazonaws.com/phoenix-geoip/GeoIPv6.dat -P /data/moloch/etc
+    wget https://s3-us-west-2.amazonaws.com/phoenix-geoip/GeoIPASNumv6.dat -P /data/moloch/etc
+    wget https://s3-us-west-2.amazonaws.com/phoenix-geoip/GeoIPASNum.dat -P /data/moloch/etc
     replace_templates "/data/moloch/etc/config.ini"
 ##TODO - degrease this...
     sed -i "s/REPLACE_MOLOCH_PASSWORD/${MOLOCHS2SPW}/g" /data/moloch/etc/config.ini
