@@ -54,6 +54,8 @@
                     </div>
                 </div>
             </div>
+        </div>
+        <div class="col-xs-6">
             <div class="panel panel-primary">
                 <div class="panel-heading">
                     <h3 class="panel-title alignleft">States</h3>
@@ -79,8 +81,7 @@
                 </table>
 
             </div>
-        </div>
-        <div class="col-xs-6">
+
             <div class="panel panel-primary">
                 <div class="panel-heading">
                     <h3 class="panel-title">Moloch Links</h3>
@@ -117,38 +118,62 @@
                     <tr>
                         <td>Hosts & Content Types</td>
                         <td>
-                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=72&srcField=ho&dstField=http.bodymagic-term&connLength=1000&minConn=1">Connections</a></td>
+                            <a target="_blank"
+                               href="{{ moloch_external_url }}/connections?date=72&srcField=ho&dstField=http.bodymagic-term&connLength=1000&minConn=1">Connections</a>
+                        </td>
                         <td>
-                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=168&srcField=ho&dstField=http.bodymagic-term&connLength=1000&minConn=1">Connections</a></td>
+                            <a target="_blank"
+                               href="{{ moloch_external_url }}/connections?date=168&srcField=ho&dstField=http.bodymagic-term&connLength=1000&minConn=1">Connections</a>
+                        </td>
                         <td>
-                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=720&srcField=ho&dstField=http.bodymagic-term&connLength=1000&minConn=1">Connections</a></td>
+                            <a target="_blank"
+                               href="{{ moloch_external_url }}/connections?date=720&srcField=ho&dstField=http.bodymagic-term&connLength=1000&minConn=1">Connections</a>
+                        </td>
                     </tr>
-                     <tr>
+                    <tr>
                         <td>Hosts & Status Codes</td>
                         <td>
-                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=72&srcField=ho&dstField=http.statuscode&connLength=1000&minConn=1">Connections</a></td>
+                            <a target="_blank"
+                               href="{{ moloch_external_url }}/connections?date=72&srcField=ho&dstField=http.statuscode&connLength=1000&minConn=1">Connections</a>
+                        </td>
                         <td>
-                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=168&srcField=ho&dstField=http.statuscode&connLength=1000&minConn=1">Connections</a></td>
+                            <a target="_blank"
+                               href="{{ moloch_external_url }}/connections?date=168&srcField=ho&dstField=http.statuscode&connLength=1000&minConn=1">Connections</a>
+                        </td>
                         <td>
-                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=720&srcField=ho&dstField=http.statuscode&connLength=1000&minConn=1">Connections</a></td>
+                            <a target="_blank"
+                               href="{{ moloch_external_url }}/connections?date=720&srcField=ho&dstField=http.statuscode&connLength=1000&minConn=1">Connections</a>
+                        </td>
                     </tr>
                     <tr>
                         <td>Certificate Name + JA3</td>
                         <td>
-                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=72&srcField=tls.alt&dstField=tlsja3-term&connLength=1000&minConn=1&expression=tls.ja3%20%3D%3D%20EXISTS!">Connections</a></td>
+                            <a target="_blank"
+                               href="{{ moloch_external_url }}/connections?date=72&srcField=tls.alt&dstField=tlsja3-term&connLength=1000&minConn=1&expression=tls.ja3%20%3D%3D%20EXISTS!">Connections</a>
+                        </td>
                         <td>
-                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=168&srcField=tls.alt&dstField=tlsja3-term&connLength=1000&minConn=1&expression=tls.ja3%20%3D%3D%20EXISTS!">Connections</a></td>
+                            <a target="_blank"
+                               href="{{ moloch_external_url }}/connections?date=168&srcField=tls.alt&dstField=tlsja3-term&connLength=1000&minConn=1&expression=tls.ja3%20%3D%3D%20EXISTS!">Connections</a>
+                        </td>
                         <td>
-                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=720&srcField=tls.alt&dstField=tlsja3-term&connLength=1000&minConn=1&expression=tls.ja3%20%3D%3D%20EXISTS!">Connections</a></td>
+                            <a target="_blank"
+                               href="{{ moloch_external_url }}/connections?date=720&srcField=tls.alt&dstField=tlsja3-term&connLength=1000&minConn=1&expression=tls.ja3%20%3D%3D%20EXISTS!">Connections</a>
+                        </td>
                     </tr>
-                      <tr>
+                    <tr>
                         <td>Certificate Name + Serial</td>
                         <td>
-                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=72&srcField=tls.alt&dstField=tls.sn&connLength=1000&minConn=1&expression=tls.ja3%20%3D%3D%20EXISTS!">Connections</a></td>
+                            <a target="_blank"
+                               href="{{ moloch_external_url }}/connections?date=72&srcField=tls.alt&dstField=tls.sn&connLength=1000&minConn=1&expression=tls.ja3%20%3D%3D%20EXISTS!">Connections</a>
+                        </td>
                         <td>
-                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=168&srcField=tls.alt&dstField=tls.sn&connLength=1000&minConn=1&expression=tls.ja3%20%3D%3D%20EXISTS!">Connections</a></td>
+                            <a target="_blank"
+                               href="{{ moloch_external_url }}/connections?date=168&srcField=tls.alt&dstField=tls.sn&connLength=1000&minConn=1&expression=tls.ja3%20%3D%3D%20EXISTS!">Connections</a>
+                        </td>
                         <td>
-                            <a target="_blank" href="{{ moloch_external_url }}/connections?date=720&srcField=tls.alt&dstField=tls.sn&connLength=1000&minConn=1&expression=tls.ja3%20%3D%3D%20EXISTS!">Connections</a></td>
+                            <a target="_blank"
+                               href="{{ moloch_external_url }}/connections?date=720&srcField=tls.alt&dstField=tls.sn&connLength=1000&minConn=1&expression=tls.ja3%20%3D%3D%20EXISTS!">Connections</a>
+                        </td>
                     </tr>
                     </tbody>
                 </table>
