@@ -134,6 +134,7 @@ services:
       - MYSQL_ROOT_PASSWORD=DOCKER_MYSQL_ROOT_PASSWORD
     volumes:
       - DOCKER_MYSQL_DIR:/var/lib/mysql
+      - DOCKER_MYSQL_CONF/mysqld.cnf:/etc/mysql/mysql.conf.d/mysqld.cnf
     networks:
       phoenix:
         ipv4_address: DOCKER_MYSQL_IP

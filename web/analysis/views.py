@@ -58,6 +58,8 @@ options = config.get("z_misp")
 misp_url = options["url"]
 misp = PyMISP(misp_url, options["apikey"], False)
 
+db = Database()
+
 results_db = settings.MONGO
 fs = GridFS(results_db)
 domains = set()
@@ -128,7 +130,6 @@ def yara_data(request):
 
 
 def url_data(request):
-    db = Database()
     num_records = int(request.GET.get('num_records', '25'))
 
     tasks_urls = db.list_tasks(limit=num_records, order_by=Task.completed_on.desc(), category="url",
@@ -149,7 +150,6 @@ def url_data(request):
 def get_data(request, num_records):
     # pr = cProfile.Profile()
     # pr.enable()
-    db = Database()
     misp = PyMISP(misp_url, options["apikey"], False)
     # TODO: add stuff for when user is not logged in
     tasks_files = db.list_tasks(limit=num_records, order_by=Task.completed_on.desc(), category="file",
@@ -319,7 +319,6 @@ def get_misp_event(analysis_id):
 @require_safe
 @login_required
 def pending(request):
-    db = Database()
     tasks = db.list_tasks(status=TASK_PENDING)
 
     pending = []
@@ -837,7 +836,6 @@ def remove(request, task_id):
         results_db.analysis.remove({"_id": ObjectId(analysis["_id"])})
 
     # Delete from SQL db.
-    db = Database()
     db.delete_task(task_id)
 
     return render(request, "success.html", {
@@ -1001,7 +999,6 @@ def import_analysis(request):
     if request.method == "GET":
         return render(request, "analysis/import.html")
 
-    db = Database()
     task_ids = []
 
     for analysis in request.FILES.getlist("analyses"):
@@ -1117,7 +1114,7 @@ def import_analysis(request):
 
 @login_required
 def reboot_analysis(request, task_id):
-    task_id = Database().add_reboot(task_id=task_id)
+    task_id = db.add_reboot(task_id=task_id)
 
     return render(request, "submission/reboot.html", {
         "task_id": task_id,

@@ -2,7 +2,7 @@
 # Copyright (C) 2014-2016 Cuckoo Foundation.
 # This file is part of Cuckoo Sandbox - http://www.cuckoosandbox.org
 # See the file 'docs/LICENSE' for copying permission.
-
+import logging
 import os
 import traceback
 
@@ -22,9 +22,12 @@ sys.path.insert(0, settings.CUCKOO_PATH)
 from lib.cuckoo.common.config import Config, parse_options, emit_options
 from lib.cuckoo.common.utils import store_temp_file
 from lib.cuckoo.core.database import Database
-from lib.cuckoo.core.rooter import vpns
+# from lib.cuckoo.core.rooter import vpns
+log = logging.getLogger(__name__)
 
 results_db = settings.MONGO
+db = Database()
+
 cfg = Config()
 processing_cfg = Config("processing")
 
@@ -67,7 +70,7 @@ def render_index(request, kwargs={}):
 
     # Prepare a list of VM names, description label based on tags.
     machines = []
-    for machine in Database().list_machines():
+    for machine in db.list_machines():
         tags = []
         for tag in machine.tags:
             tags.append(tag.name)
@@ -82,7 +85,7 @@ def render_index(request, kwargs={}):
     # Prepend ALL/ANY options.
     machines.insert(0, ("", "First available"))
     machines.insert(1, ("all", "All"))
-
+    vpns = get_vpns()
     values = {
         "packages": sorted(packages),
         "machines": machines,
@@ -130,7 +133,6 @@ def index(request, task_id=None, sha1=None):
         options["human"] = "0"
 
     tlp = request.POST.get('tlp')
-    db = Database()
     task_ids = []
     task_machines = get_task_machines(db, machine)
     credit = UsageLimits.get_credit(request.user)
@@ -140,7 +142,7 @@ def index(request, task_id=None, sha1=None):
         })
     # In case of resubmitting a file.
     if request.POST.get("category") == "file":
-        task = Database().view_task(task_id)
+        task = db.view_task(task_id)
 
         for entry in task_machines:
             if not UsageLimits.take_credit(request.user):
@@ -322,7 +324,7 @@ def get_task_machines(db, machine):
 
 @login_required
 def status(request, task_id):
-    task = Database().view_task(task_id)
+    task = db.view_task(task_id)
     if not task:
         return render(request, "error.html", {
             "error": "The specified task doesn't seem to exist.",
@@ -339,7 +341,7 @@ def status(request, task_id):
 
 @login_required
 def resubmit(request, task_id):
-    task = Database().view_task(task_id)
+    task = db.view_task(task_id)
 
     if request.method == "POST":
         return index(request, task_id)
@@ -369,7 +371,7 @@ def submit_dropped(request, task_id, sha1):
     if request.method == "POST":
         return index(request, task_id, sha1)
 
-    task = Database().view_task(task_id)
+    task = db.view_task(task_id)
     if not task:
         return render(request, "error.html", {
             "error": "No Task found with this ID",
@@ -382,3 +384,21 @@ def submit_dropped(request, task_id, sha1):
         "dropped_file": True,
         "options": emit_options(task.options),
     })
+
+def get_vpns():
+    vpn = Config("vpn")
+    vpns={}
+    # Check whether all VPNs exist if configured and make their configuration
+    # available through the vpns variable. Also enable NAT on each interface.
+    if vpn.vpn.enabled:
+        for name in vpn.vpn.vpns.split(","):
+            name = name.strip()
+            if not name:
+                continue
+
+            if not hasattr(vpn, name):
+                logging.warn("Configuration not found for {0}".format(name))
+
+            entry = vpn.get(name)
+            vpns[entry.name] = entry
+    return vpns

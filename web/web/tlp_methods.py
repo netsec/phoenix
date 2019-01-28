@@ -5,6 +5,7 @@ from django.conf import settings
 from lib.cuckoo.core.database import Database
 
 results_db = settings.MONGO
+mysql_db = Database()
 
 
 def get_tlp_users(user):
@@ -52,7 +53,6 @@ def get_mongo_tlp_query_object(username, usersInGroup):
 
 
 def get_mysql_tlp_query_object(username,start_time=datetime.min, end_time=datetime.max):
-    mysql_db = Database()
     return mysql_db.get_ids_for_tlp(username,start_time, end_time)
 
 

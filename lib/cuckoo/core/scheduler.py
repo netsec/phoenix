@@ -10,6 +10,7 @@ import logging
 import threading
 import Queue
 
+
 from lib.cuckoo.common.config import Config, emit_options
 from lib.cuckoo.common.constants import CUCKOO_ROOT
 from lib.cuckoo.common.exceptions import CuckooMachineError, CuckooGuestError
@@ -24,11 +25,13 @@ from lib.cuckoo.core.plugins import list_plugins, RunAuxiliary, RunProcessing
 from lib.cuckoo.core.plugins import RunSignatures, RunReporting
 from lib.cuckoo.core.resultserver import ResultServer
 from lib.cuckoo.core.rooter import rooter, vpns
+# from lib.phoenix.HighLowSemaphore import HighLowSemaphore
 
 log = logging.getLogger(__name__)
 
 machinery = None
 machine_lock = None
+# analysis_lock = None
 latest_symlink_lock = threading.Lock()
 
 active_analysis_count = 0
@@ -48,6 +51,7 @@ class AnalysisManager(threading.Thread):
 
         self.errors = error_queue
         self.cfg = Config()
+        self.mem_cfg = Config("memory")
         self.storage = ""
         self.binary = ""
         self.storage_binary = ""
@@ -433,6 +437,9 @@ class AnalysisManager(threading.Thread):
             if self.cfg.cuckoo.memory_dump or self.task.memory:
                 try:
                     dump_path = os.path.join(self.storage, "memory.dmp")
+                    memdump_tmp = self.mem_cfg.basic.memdump_tmp
+                    if memdump_tmp:
+                        dump_path = os.path.join(memdump_tmp, str(self.task.id))+".dmp"
                     machinery.dump_memory(self.machine.label, dump_path)
                 except NotImplementedError:
                     log.error("The memory dump functionality is not available "
@@ -562,6 +569,7 @@ class AnalysisManager(threading.Thread):
             log.exception("Failure in AnalysisManager.run")
 
         task_log_stop(self.task.id)
+        # analysis_lock.release()
         active_analysis_count -= 1
 
 class Scheduler(object):
@@ -579,6 +587,7 @@ class Scheduler(object):
         self.water_gate = False
         self.running = True
         self.cfg = Config()
+        self.mem_cfg = Config("memory")
         self.low_watermark = int(self.cfg.cuckoo.low_watermark)
         self.high_watermark = int(self.cfg.cuckoo.high_watermark)
         self.db = Database()
@@ -597,6 +606,8 @@ class Scheduler(object):
         else:
             machine_lock = threading.Lock()
 
+        # global analysis_lock
+        # analysis_lock = HighLowSemaphore()
         log.info("Using \"%s\" as machine manager", machinery_name)
 
         # Get registered class name. Only one machine manager is imported,
@@ -689,6 +700,9 @@ class Scheduler(object):
         while self.running:
             time.sleep(1)
 
+
+
+                
             # Wait until the machine lock is not locked. This is only the case
             # when all machines are fully running, rather that about to start
             # or still busy starting. This way we won't have race conditions
@@ -767,7 +781,6 @@ class Scheduler(object):
             # selected machine onto the Analysis Manager instance.
             task, available = None, False
             for machine in self.db.get_available_machines():
-                log.info("Machine {0} is available, fetching one task".format(machine.name))
                 task = self.db.fetch(machine=machine.name)
                 if task:
                     break
@@ -779,7 +792,6 @@ class Scheduler(object):
             # machines is not a "service" machine (again, please refer to the
             # services auxiliary module for more information on service VMs).
             if not task and available:
-                log.info("Fetching a task in service section")
                 task = self.db.fetch(service=False)
 
             if task:

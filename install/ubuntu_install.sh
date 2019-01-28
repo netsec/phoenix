@@ -77,7 +77,8 @@ DOCKER_ELASTIC_BACKUP_DIR="/esbackup"
 # MySQL
 DOCKER_MYSQL_IP="172.18.1.252"
 DOCKER_MYSQL_PASSWORD="cuckoo"
-DOCKER_MYSQL_DIR="/ssd/mysql"
+DOCKER_MYSQL_DIR="/ssd/mysql/data"
+DOCKER_MYSQL_CONF="/ssd/mysql/etc"
 DOCKER_MYSQL_DATABASE="cuckoo"
 DOCKER_MYSQL_ROOT_PASSWORD="Root123"
 MYSQL_CONN_STR="mysql://${CUCKOO_USER}:${DOCKER_MYSQL_PASSWORD}@${DOCKER_MYSQL_IP}/${DOCKER_MYSQL_DATABASE}"
@@ -169,6 +170,7 @@ replace_templates() {
     sed -i "s/DOCKER_MYSQL_IP/${DOCKER_MYSQL_IP}/g" $1
     sed -i "s/DOCKER_MYSQL_ROOT_PASSWORD/${DOCKER_MYSQL_ROOT_PASSWORD}/g" $1
     sed -i "s:DOCKER_MYSQL_DIR:$(realpath ${DOCKER_MYSQL_DIR}):g" $1
+    sed -i "s:DOCKER_MYSQL_CONF:$(realpath ${DOCKER_MYSQL_CONF}):g" $1
 
     sed -i "s:DOCKER_ELASTIC_DIR:$(realpath ${DOCKER_ELASTIC_DIR}):g" $1
     sed -i "s:DOCKER_ELASTIC_BACKUP_DIR:$(realpath ${DOCKER_ELASTIC_BACKUP_DIR}):g" $1
@@ -338,6 +340,11 @@ mkdir -p "${DOCKER_MONGO_DIR}/etc"
 mkdir -p "${DOCKER_ELASTIC_DIR}"
 mkdir -p "${DOCKER_MISP_DIR}"
 mkdir -p "${DOCKER_MISP_BACKUP_DIR}"
+mkdir -p "${DOCKER_MYSQL_DIR}"
+mkdir -p "${DOCKER_MYSQL_CONF}"
+/bin/cp -f "mysql/mysqld.cnf" "${DOCKER_MYSQL_CONF}"
+chown -R 999.999 ${DOCKER_MYSQL_CONF}
+chown -R 999.999 ${DOCKER_MYSQL_DIR}
 chown -R 1000.1000 ${DOCKER_ELASTIC_DIR}
 
 ## pre-make Grafana folder - change this to named volume later
@@ -630,24 +637,24 @@ touch /etc/init.d/functions
 }
 
 setup_mongo(){
-docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'info.ended':-1})\""
-docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'info.id':1})\""
-docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'info.started':1})\""
-docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'procmemory.extracted.sha1':-1})\""
-docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'procmemory.extracted.sha1':1})\""
-docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'network.http_ex.sha1':1})\""
-docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'network.https_ex.sha1':1})\""
-docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'procmemory.extracted.sha256':1})\""
-docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'target.file.sha256':1})\""
-docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'dropped.sha256':1})\""
-docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'info.tlp':1})\""
-docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'info.owner':1})\""
-docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'info.started':1})\""
-docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'network.dns.request':1})\""
-docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'network.http_ex.host':1})\""
-docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'network.https_ex.host':1})\""
-docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'target.file.sha1':1})\""
-docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo analysis --eval \"db.analysis.createIndex({'network.domains.domain':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo cuckoo --eval \"db.analysis.createIndex({'info.ended':-1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo cuckoo --eval \"db.analysis.createIndex({'info.id':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo cuckoo --eval \"db.analysis.createIndex({'info.started':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo cuckoo --eval \"db.analysis.createIndex({'procmemory.extracted.sha1':-1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo cuckoo --eval \"db.analysis.createIndex({'procmemory.extracted.sha1':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo cuckoo --eval \"db.analysis.createIndex({'network.http_ex.sha1':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo cuckoo --eval \"db.analysis.createIndex({'network.https_ex.sha1':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo cuckoo --eval \"db.analysis.createIndex({'procmemory.extracted.sha256':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo cuckoo --eval \"db.analysis.createIndex({'target.file.sha256':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo cuckoo --eval \"db.analysis.createIndex({'dropped.sha256':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo cuckoo --eval \"db.analysis.createIndex({'info.tlp':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo cuckoo --eval \"db.analysis.createIndex({'info.owner':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo cuckoo --eval \"db.analysis.createIndex({'info.started':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo cuckoo --eval \"db.analysis.createIndex({'network.dns.request':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo cuckoo --eval \"db.analysis.createIndex({'network.http_ex.host':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo cuckoo --eval \"db.analysis.createIndex({'network.https_ex.host':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo cuckoo --eval \"db.analysis.createIndex({'target.file.sha1':1})\""
+docker-compose -f ../docker/docker-compose.yml exec -T phoenix-mongo sh -c "mongo cuckoo --eval \"db.analysis.createIndex({'network.domains.domain':1})\""
 }
 
 setup_moloch() {
@@ -883,6 +890,9 @@ echo "##### Setting up storage #####"
             mkdir -p "$PHOENIXSTORAGE"
         fi
             mv "$CUCKOODIR/storage" "$PHOENIXSTORAGE"
+            if [ ! -d "$PHOENIXSTORAGE/storage" ]; then
+                mkdir -p "$PHOENIXSTORAGE/storage"
+            fi
             ln -s "$PHOENIXSTORAGE/storage" "$CUCKOODIR/storage"
             chown -R $CUCKOO_USER.$CUCKOO_USER "$PHOENIXSTORAGE"
             chown -R $CUCKOO_USER.$CUCKOO_USER "$CUCKOODIR"

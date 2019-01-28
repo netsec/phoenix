@@ -465,7 +465,7 @@ class Database(object):
                 # See: http://www.postgresql.org/docs/9.0/static/libpq-ssl.html#LIBPQ-SSL-SSLMODE-STATEMENTS
                 self.engine = create_engine(connection_string, connect_args={"sslmode": "disable"})
             else:
-                self.engine = create_engine(connection_string, pool_recycle=3600)
+                self.engine = create_engine(connection_string, pool_recycle=3600, pool_pre_ping=True)
         except ImportError as e:
             lib = e.message.split()[-1]
             raise CuckooDependencyError(
@@ -613,7 +613,6 @@ class Database(object):
 
             row = q.order_by(Task.priority.desc(), Task.added_on).first()
             if row:
-                log.info("Setting task {0} to Running status".format(row.id))
                 self.set_status(task_id=row.id, status=TASK_RUNNING)
                 session.refresh(row)
 
@@ -1426,6 +1425,22 @@ class Database(object):
             session.close()
         return errors
 
+    def get_email_for_user(self, username):
+        session = self.Session()
+        try:
+            query = 'select email from auth_user where username=:username'
+            params = {"username":username}
+            cursor = session.execute(query,params)
+            if cursor.rowcount > 0:
+                return cursor.fetchone()[0]
+            else:
+                log.warn("No users found for username {0}".format(username))
+                return None
+        except Exception as e:
+            log.exception("Failed to get email for user {0}".format(username))
+        finally:
+            session.close()
+
     def processing_get_task(self, instance):
         """Get an available task for processing."""
         session = self.Session()
@@ -1486,12 +1501,12 @@ INNER JOIN tasks t
   ON outer_a.username = t.owner 
 WHERE t.started_on > :start_time 
 AND t.completed_on <= :end_time 
-AND outer_g.group_id IN 
+AND ((outer_g.group_id IN 
     (SELECT g.group_id 
     FROM auth_user a 
     INNER JOIN auth_user_groups g 
       ON g.user_id = a.id 
-    WHERE a.username = :user)""";
+    WHERE a.username = :user) AND t.tlp='amber') OR t.tlp='green' OR (t.tlp='red' and t.owner = 'admin'))""";
             result = list(session.execute(query, params).fetchall())
             return [str(item[0]) for item in result]
         except Exception as e:

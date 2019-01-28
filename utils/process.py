@@ -66,7 +66,7 @@ def autoprocess(parallel=8):
     # Respawn a worker process every 1000 tasks just in case we
     # have any memory leaks.
     pool = multiprocessing.Pool(processes=parallel, initializer=init_worker,
-                                maxtasksperchild=1000)
+                                maxtasksperchild=1)
 
     try:
         while True:
@@ -173,6 +173,8 @@ def abortable_worker(func, *args, **kwargs):
     res = p.apply_async(func, args=args, kwds=kwargs.get("orig_kwargs",None))
     try:
         out = res.get(timeout)  # Wait timeout seconds for func to complete.
+        p.close()
+        p.join()
         return out
     except multiprocessing.TimeoutError:
         log.critical("Task#{0}: Aborting due to timeout".format(task_id))

@@ -245,6 +245,8 @@ optional arguments:
 ```
 python /opt/phoenix/utils/setup_user.py -g SecOps -g CyberIntel JoeBlow@yourdomain.com 
 ```
+##### Create the folder that is set as `tmppath` in `cuckoo.conf` and chown it to `cuckoo.cuckoo`, if you changed it to something other than /tmp
+
 ##### Finally, turn VPNs on in `/opt/phoenix/conf/vpn.conf`
 ![VPNConf1](./install/screencaps/vpnconf.PNG)
 ##### With users and groups setup, and VPNs turned on, you can start submitting files, and enjoying your Phoenix install
@@ -252,6 +254,7 @@ python /opt/phoenix/utils/setup_user.py -g SecOps -g CyberIntel JoeBlow@yourdoma
 
 ### Pro Tips:
 * We haven't seen any issues using chrome, so I'd advise using that browser with Cuckoo/Phoenix
+* If you set a new path via `tmppath` in `cuckoo.conf` make sure to create the folder and `chown` it to `cuckoo.cuckoo`
 * There are some additional configurations you can enable to make cuckoo use other (larger/faster) mounts if you have those on your systems.  Read through the comments in ubuntu_installer.sh
 * To update the code from github, simply run update_cuckoo.sh from the root of your cuckoo folder (in our example /opt/phoenix).  
 *** We recommend you backup before you run this ***
@@ -268,7 +271,11 @@ python cuckoo.py -d -m 1000000
 ## If you use this greasy hack, remember to take `cuckood` out of `PROGNAMES` in `/etc/init.d/cuckoo_all`.
 ```
 
-* If you want to greatly improve processing time, especially as it pertains to volatility, look at conf/memory.conf and allocate some space to `memdump_tmp`.  That will ensure that all volatility processing (very heavy IO) is done entirely in memory.
+* If you want to greatly improve processing time, especially as it pertains to volatility, look at conf/memory.conf and allocate some space to `memdump_tmp`.  That will ensure that all volatility processing (very heavy IO) is done entirely in memory, or on a dedicated file system.
+    * Remember to turn 'delete_memdump' = yes
+    * Uncomment del_memdump_from_reported.sh and set the "STORAGE" variable
+    * 36GB tmpfs RAM disk was used with 6 VMs, high watermark = 10, low watermark = 5
+    
 * Got lots of cores?  Modify /etc/init.d/cuckoop and crank the threads up for processing.  Use netdata to figure out what your bottlenecks are (disk, cpu, etc.) and tune accordingly.
 
 

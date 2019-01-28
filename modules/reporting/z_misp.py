@@ -16,10 +16,14 @@ from pymisp import MISPObjectReference
 
 
 ##TODO Degrease
+from lib.cuckoo.core.database import Database
+
 sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", ".."))
 sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), "..","..", "web"))
 sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), "..","..", "web", "web"))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
+db = Database()
+
 from django.conf import settings
 
 
@@ -31,8 +35,8 @@ try:
     HAVE_MISP = True
 except ImportError:
     HAVE_MISP = False
-import django
-from django.contrib.auth.models import User
+# import django
+# from django.contrib.auth.models import User
 from lib.cuckoo.common.abstracts import Report
 from lib.cuckoo.common.exceptions import CuckooProcessingError
 from lib.cuckoo.common.whitelist import is_whitelisted_domain, is_whitelisted_url, is_whitelisted_ip
@@ -183,54 +187,55 @@ class MISP(Report):
                         refs_to_add.append(self.create_reference(initial_file_object,url_obj.uuid,  'communicates-with'))
                         urls_added[uri_] = url_obj.uuid
                         event_obj.add_object(url_obj)
-        if 'domains' in results['network']:
-            for entry in results["network"].get('domains',[]):
-                if entry["domain"] in resolved_hosts:
-                    domain_obj = MISPObject(name="domain-ip", standalone=False, text="Domain and IP seen resolved")
-                    domain_obj.add_attribute('domain', value=entry['domain'])
-                    domain_obj.add_attribute('ip', value=entry['ip'])
-                    refs_to_add.append(self.create_reference(initial_file_object,domain_obj.uuid,  'communicates-with'))
-                    event_obj.add_object(domain_obj)
-        if 'tcp' in results["network"]:
-            tcp_added = []
-            for tcpcon in results.get("tcp", {}).get('tcp', []):
-                if (tcpcon["dport"] > 1023) and (tcpcon["sport"] > 1023):
-                    ##TODO grab this from the config instead
-                    if str(tcpcon["dst"]).startswith('10.200.0.'):
-                        dstip = tcpcon["src"]
-                        dstport = tcpcon["sport"]
-                        srcport = tcpcon["dport"]
-                    else:
-                        dstip = tcpcon["dst"]
-                        dstport = tcpcon["dport"]
-                        srcport = tcpcon["sport"]
-                    ## Build the ip-dst object
-                    ipdst_obj = MISPObject(name='ip-port', standalone=False, text="Potential TCP C2")
-                    ## Add your attributes
-                    ipdst_obj.add_attribute('src-port', value=srcport)
-                    ipdst_obj.add_attribute('dst-port', value=dstport)
-                    ipdst_obj.add_attribute('ip', value=dstip)
-                    ## Add your reference
-                    refs_to_add.append(self.create_reference(initial_file_object,ipdst_obj.uuid,  'communicates-with'))
-                    ## Add your object
-                    event_obj.add_object(ipdst_obj)
+        if 'network' in results:
+            if 'domains' in results['network']:
+                for entry in results["network"].get('domains',[]):
+                    if entry["domain"] in resolved_hosts:
+                        domain_obj = MISPObject(name="domain-ip", standalone=False, text="Domain and IP seen resolved")
+                        domain_obj.add_attribute('domain', value=entry['domain'])
+                        domain_obj.add_attribute('ip', value=entry['ip'])
+                        refs_to_add.append(self.create_reference(initial_file_object,domain_obj.uuid,  'communicates-with'))
+                        event_obj.add_object(domain_obj)
+            if 'tcp' in results["network"]:
+                tcp_added = []
+                for tcpcon in results.get("tcp", {}).get('tcp', []):
+                    if (tcpcon["dport"] > 1023) and (tcpcon["sport"] > 1023):
+                        ##TODO grab this from the config instead
+                        if str(tcpcon["dst"]).startswith('10.200.0.'):
+                            dstip = tcpcon["src"]
+                            dstport = tcpcon["sport"]
+                            srcport = tcpcon["dport"]
+                        else:
+                            dstip = tcpcon["dst"]
+                            dstport = tcpcon["dport"]
+                            srcport = tcpcon["sport"]
+                        ## Build the ip-dst object
+                        ipdst_obj = MISPObject(name='ip-port', standalone=False, text="Potential TCP C2")
+                        ## Add your attributes
+                        ipdst_obj.add_attribute('src-port', value=srcport)
+                        ipdst_obj.add_attribute('dst-port', value=dstport)
+                        ipdst_obj.add_attribute('ip', value=dstip)
+                        ## Add your reference
+                        refs_to_add.append(self.create_reference(initial_file_object,ipdst_obj.uuid,  'communicates-with'))
+                        ## Add your object
+                        event_obj.add_object(ipdst_obj)
 
-        if 'dead_hosts' in results["network"]:
-            dead_added = []
-            for deadcon in results["network"]["dead_hosts"]:
-                ##TODO add whitelisting
-                #if not str(deadcon[0]).startswith('10.200.0.') and not is_whitelisted_ip(deadcon[0]):
-                if not str(deadcon[0]).startswith('10.200.0.'):
-                    ## Build the ip-dst object
-                    ipdst_obj = MISPObject(name='ip-port', standalone=False, text="Potential Dead TCP C2")
-                    ## Add your attributes
-                    ipdst_obj.add_attribute('dst-port', value=deadcon[1])
-                    ipdst_obj.add_attribute('ip', value=deadcon[0])
-                    ipdst_obj.add_attribute('text', type="text", value='Potential Dead TCP C2')
-                    ## Add your reference
-                    refs_to_add.append(self.create_reference(initial_file_object,ipdst_obj.uuid,  'communicates-with'))
-                    ## Add your object
-                    event_obj.add_object(ipdst_obj)
+            if 'dead_hosts' in results["network"]:
+                dead_added = []
+                for deadcon in results["network"]["dead_hosts"]:
+                    ##TODO add whitelisting
+                    #if not str(deadcon[0]).startswith('10.200.0.') and not is_whitelisted_ip(deadcon[0]):
+                    if not str(deadcon[0]).startswith('10.200.0.'):
+                        ## Build the ip-dst object
+                        ipdst_obj = MISPObject(name='ip-port', standalone=False, text="Potential Dead TCP C2")
+                        ## Add your attributes
+                        ipdst_obj.add_attribute('dst-port', value=deadcon[1])
+                        ipdst_obj.add_attribute('ip', value=deadcon[0])
+                        ipdst_obj.add_attribute('text', type="text", value='Potential Dead TCP C2')
+                        ## Add your reference
+                        refs_to_add.append(self.create_reference(initial_file_object,ipdst_obj.uuid,  'communicates-with'))
+                        ## Add your object
+                        event_obj.add_object(ipdst_obj)
 
 
 
@@ -480,7 +485,7 @@ class MISP(Report):
         apikey = self.options.get("apikey")
         # email_suffix = self.options.get("email_suffix")
         mode = shlex.split(self.options.get("mode") or "")
-        django.setup()
+        # django.setup()
         if not url or not apikey:
             raise CuckooProcessingError(
                 "Please configure the URL and API key for your MISP instance."
@@ -491,14 +496,16 @@ class MISP(Report):
         # org_obj = self.misp.get_organisations_list()["response"]
         # orgs = map(lambda org: {"name": org["Organisation"]["name"], "id": org["Organisation"]["id"]}, org_obj)
         sharing_groups = self.misp.get_sharing_groups()
+        email = db.get_email_for_user(owner)
 
-        user_object = User.objects.get(username=owner)
+        # user_object = User.objects.get(username=owner)
         # group_names = set([group.name for group in user_object.groups.all()])
         # common_groups = set(map(lambda org: org["name"], orgs)) & group_names
 
         # users_map = map(lambda user: {user["User"]["email"]: user["User"]["authkey"]}, self.misp.get_users_list()["response"])
         users_map = {user["User"]["email"]: {"auth_key": user["User"]["authkey"], "org_id": user["Organisation"]["id"]} for user in self.check_misp_errors(self.misp.get_users_list(), "Couldn't get users from MISP")}
-        user_email = user_object.email
+        #user_email = user_object.email
+        user_email = email
         if user_email in users_map and self.task["tlp"] != "red":
             misp_user = users_map[user_email]
             self.user_misp = pymisp.PyMISP(url, users_map[user_email]["auth_key"], False, "json")

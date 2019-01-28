@@ -54,10 +54,10 @@ MOLOCH_INSECURE = cfg.moloch.get("insecure")
 # In case we have VPNs enabled we need to initialize through the following
 # two methods as they verify the interaction with VPNs as well as gather
 # which VPNs are available (for representation upon File/URL submission).
-from lib.cuckoo.core.startup import init_rooter, init_routing
-
-init_rooter()
-init_routing()
+# from lib.cuckoo.core.startup import init_rooter, init_routing
+#
+# init_rooter()
+# init_routing()
 
 DEBUG = False
 

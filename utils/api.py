@@ -79,55 +79,59 @@ def custom_headers(response):
 @app.route("/tasks/create/file", methods=["POST"])
 @app.route("/v1/tasks/create/file", methods=["POST"])
 def tasks_create_file():
-    if not request.form.get("owner"):
-        return json_error(400, "User not specified")
-    if not request.form.get("tlp") or request.form.get("tlp") not in ["green", "amber", "red"]:
-        return json_error(400, "TLP must be specified as \"green\", \"amber\", or \"red\"")
-    if not UsageLimits.take_credit(User.objects.get(username=request.form.get("owner", ""))):
-        return json_error(400, "You have exceeded your usage limits")
-    data = request.files["file"]
-    package = request.form.get("package", "")
-    timeout = request.form.get("timeout", "")
-    priority = request.form.get("priority", 1)
-    options = request.form.get("options", "")
-    machine = request.form.get("machine", "")
-    platform = request.form.get("platform", "")
-    tlp = request.form.get("tlp", "")
-    tags = request.form.get("tags", None)
-    custom = request.form.get("custom", "")
-    owner = request.form.get("owner", "")
-    memory = request.form.get("memory", False)
-    clock = request.form.get("clock", None)
-    if not tlp:
-        tlp = "green"
+    try:
+        if not request.form.get("owner"):
+            return json_error(400, "User not specified")
+        if not request.form.get("tlp") or request.form.get("tlp") not in ["green", "amber", "red"]:
+            return json_error(400, "TLP must be specified as \"green\", \"amber\", or \"red\"")
+        if not UsageLimits.take_credit(User.objects.get(username=request.form.get("owner", ""))):
+            return json_error(400, "You have exceeded your usage limits")
+        data = request.files["file"]
+        package = request.form.get("package", "")
+        timeout = request.form.get("timeout", "")
+        priority = request.form.get("priority", 1)
+        options = request.form.get("options", "")
+        machine = request.form.get("machine", "")
+        platform = request.form.get("platform", "")
+        tlp = request.form.get("tlp", "")
+        tags = request.form.get("tags", None)
+        custom = request.form.get("custom", "")
+        owner = request.form.get("owner", "")
+        memory = request.form.get("memory", False)
+        clock = request.form.get("clock", None)
+        if not tlp:
+            tlp = "green"
 
-    if memory:
-        memory = True
-    enforce_timeout = request.form.get("enforce_timeout", False)
+        if memory:
+            memory = True
+        enforce_timeout = request.form.get("enforce_timeout", False)
 
-    if enforce_timeout:
-        enforce_timeout = True
+        if enforce_timeout:
+            enforce_timeout = True
 
-    temp_file_path = store_temp_file(data.read(), data.filename)
+        temp_file_path = store_temp_file(data.read(), data.filename)
 
-    task_id = db.add_path(
-        file_path=temp_file_path,
-        package=package,
-        timeout=timeout,
-        priority=priority,
-        options=options,
-        machine=machine,
-        platform=platform,
-        tags=tags,
-        tlp=tlp,
-        custom=custom,
-        owner=owner,
-        memory=memory,
-        enforce_timeout=enforce_timeout,
-        clock=clock
-    )
+        task_id = db.add_path(
+            file_path=temp_file_path,
+            package=package,
+            timeout=timeout,
+            priority=priority,
+            options=options,
+            machine=machine,
+            platform=platform,
+            tags=tags,
+            tlp=tlp,
+            custom=custom,
+            owner=owner,
+            memory=memory,
+            enforce_timeout=enforce_timeout,
+            clock=clock
+        )
 
-    return jsonify(task_id=task_id)
+        return jsonify(task_id=task_id)
+    except Exception as e:
+        traceback.print_exc()
+        return json_error('500', e.message)
 
 
 @app.route("/tasks/create/url", methods=["POST"])
@@ -423,7 +427,7 @@ def rereport(task_id):
 
 @app.route("/tasks/reboot/<int:task_id>")
 def reboot(task_id):
-    reboot_id = Database().add_reboot(task_id=task_id)
+    reboot_id = db.add_reboot(task_id=task_id)
     if not reboot_id:
         return json_error(404, "Error creating reboot task")
 
@@ -654,6 +658,18 @@ def get_analyses_numbers_for_tlp(username, startTime, stopTime):
         print e
         traceback.print_exc()
         return json_error(500, "TLP query failed, check API log")
+
+
+@app.errorhandler(500)
+def internal_server_error(error):
+    app.logger.error('Server Error: %s', (error))
+    print 'Server Error: %s', (error)
+
+
+@app.errorhandler(Exception)
+def unhandled_exception(e):
+    app.logger.error('Unhandled Exception: %s', (e))
+    print 'Unhandled Exception: %s', (e)
 
 
 if __name__ == "__main__":
