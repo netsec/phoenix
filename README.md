@@ -261,6 +261,7 @@ python /opt/phoenix/utils/setup_user.py -g SecOps -g CyberIntel JoeBlow@yourdoma
 * Put the Yara rules you'd like tagged into MISP in /opt/phoenix/data/external
 * When using the auto-tagging feature (conf/misp.json) make sure to setup your tags within MISP first, and use the ID which MISP generates there for your auto-tagging
 * Cuckoo has bugs.  We did everything we could to package up great logging with this appliance.  If things crash, please take a look in kibana and the logs there.
+* If you're planning to use a script to send lots of submissions to the API, make sure you crank up your Usage Limits in the Admin section (https://<cuckoo_home_url>/admin) under the user (it's at the bottom)
 * We've seen sometimes where cuckoo.py crashes, so often we'll run it in a screen like so:
 
 ```
@@ -272,8 +273,10 @@ python cuckoo.py -d -m 1000000
 ```
 
 * If you want to greatly improve processing time, especially as it pertains to volatility, look at conf/memory.conf and allocate some space to `memdump_tmp`.  That will ensure that all volatility processing (very heavy IO) is done entirely in memory, or on a dedicated file system.
-    * Remember to turn 'delete_memdump' = yes
-    * Uncomment del_memdump_from_reported.sh and set the "STORAGE" variable
+    * Remember to turn 'delete_memdump' = yes in `<cuckoodir>/conf/memory.conf`
+    * Uncomment the `memdump_tmp` line in `<cuckoodir>/conf/memory.conf` and set the value to your memory volume  
+    * Uncomment `del_memdump_from_reported.sh` from cuckoo's `crontab` 
+    * In `<cuckoodir>/utils/del_memdump_from_reported.sh`, set the "STORAGE" variable to your memory volume
     * 36GB tmpfs RAM disk was used with 6 VMs, high watermark = 10, low watermark = 5
     
 * Got lots of cores?  Modify /etc/init.d/cuckoop and crank the threads up for processing.  Use netdata to figure out what your bottlenecks are (disk, cpu, etc.) and tune accordingly.
