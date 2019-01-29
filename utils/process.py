@@ -17,6 +17,8 @@ from functools import partial
 # from pathos.helpers import ThreadPool
 from multiprocessing.pool import ThreadPool
 
+from datetime import date, datetime, timedelta
+
 sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), ".."))
 
 from lib.cuckoo.common.config import Config
@@ -62,7 +64,7 @@ def autoprocess(parallel=8):
     count = 0
     db = Database()
     pending_results = {}
-
+    last_seen = datetime.now()
     # Respawn a worker process every 1000 tasks just in case we
     # have any memory leaks.
     pool = multiprocessing.Pool(processes=parallel, initializer=init_worker,
@@ -71,10 +73,15 @@ def autoprocess(parallel=8):
     try:
         while True:
             # Pending results maintenance.
+            if len(pending_results) > 0 and last_seen < (datetime.now()-timedelta(minutes=15)):
+                log.fatal("Processing is hung, exiting and letting cuckoomonitor start again")
+                pool.terminate()
+                sys.exit(1)
             for tid, ar in pending_results.items():
                 if not ar.ready():
                     continue
 
+                last_seen = datetime.now()
                 if ar.successful():
                     log.info("Task #%d: reports generation completed", tid)
                     db.set_status(tid, TASK_REPORTED)
