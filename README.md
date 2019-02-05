@@ -254,6 +254,7 @@ python /opt/phoenix/utils/setup_user.py -g SecOps -g CyberIntel JoeBlow@yourdoma
 
 ### Pro Tips:
 * We haven't seen any issues using chrome, so I'd advise using that browser with Cuckoo/Phoenix
+* If you start noticing that no reports are switching from "pending" to "running", then cuckoop (cuckoo.py) is having issues.  check /var/log/cuckoo/cuckoo.log.  The usual culprit is a VPN circuit being down causing cuckoo to fail to start.  You'll see which it is in that log.  Do a full_restart to bounce all the circuits, and if that circuit still refuses to come up, remove it from vpn.conf.
 * If you set a new path via `tmppath` in `cuckoo.conf` make sure to create the folder and `chown` it to `cuckoo.cuckoo`
 * There are some additional configurations you can enable to make cuckoo use other (larger/faster) mounts if you have those on your systems.  Read through the comments in ubuntu_installer.sh
 * To update the code from github, simply run update_cuckoo.sh from the root of your cuckoo folder (in our example /opt/phoenix).  
