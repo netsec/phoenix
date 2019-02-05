@@ -16,7 +16,7 @@ gunicorn==19.9.0
 HTTPReplay==0.1.18
 idna==2.0
 idstools==0.6.3
-ipaddress==1.0.14
+ipaddress==1.0.16
 itsdangerous==0.24
 Jinja2==2.8
 jsbeautifier==1.5.10
@@ -46,5 +46,5 @@ SQLAlchemy==1.2.17
 tlslite-ng==0.6.0-alpha3
 wakeonlan==0.2.2
 Werkzeug==0.10.4
-yara-python==3.7.0
+yara-python==3.4.0
 pydeep==0.2

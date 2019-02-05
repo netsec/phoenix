@@ -16,5 +16,8 @@ rm -rf $SRC_HOME
 cd $CUCKOO_HOME/web
 pip install -r ../requirements.txt
 
+python manage.py makemigrations auth
+python manage.py migrate auth
+
 python manage.py makemigrations analysis
 python manage.py migrate
