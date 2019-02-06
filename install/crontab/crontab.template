@@ -1,4 +1,5 @@
 #CUCKOOCRONS
-* * * * * CUCKOODIR/utils/crontab/cuckoo/clean_mem.sh
+#* * * * * CUCKOODIR/utils/crontab/cuckoo/clean_mem.sh
 * * * * * CUCKOODIR/utils/mongo_stats.sh DOCKER_ELASTIC_IP:9200 DOCKER_MONGO_IP
+#* * * * * CUCKOODIR/utils/crontab/cuckoo/del_memdump_from_reported.sh
 #ENDCUCKOOCRONS

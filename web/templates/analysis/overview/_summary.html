@@ -14,13 +14,13 @@
                     {% if process.summary %}
                     <div class="panel panel-default">
                         <div class="panel-heading"><h3 class="panel-title">Process {{process.process_name}} ({{process.pid}})</h3></div>
-                        <ul class="list-group">
+                        <ul class="list-group forcewrap">
                         {% if process.summary.file_opened %}
                             <li class="list-group-item">
                                 <p><b>Opened files</b></p>
                                 <ul>
                                 {% for entry in process.summary.file_opened %}
-                                    <li>{{entry}}</li>
+                                    <li>{{entry | truncatechars:100}}</li>
                                 {% endfor %}
                                 </ul>
                             </li>

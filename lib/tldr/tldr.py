@@ -151,10 +151,21 @@ def run_tldr(id, username, clionly):
                 if doc["virustotal"]["scans"][vscan]["detected"]:
                     output["File"]["AV_Hits"][vscan] = doc["virustotal"]["scans"][vscan]["result"]
         if 'behavior' in doc:
+            behavior_generic_dict={}
+            if 'generic' in doc["behavior"]:
+                behavior_generic_dict = {str(obj["process_path"]).lower() :obj["summary"] for obj in doc["behavior"]["generic"]}
             for cli in doc["behavior"]["processes"]:
                 ####TODO populate this with command lines to ignore from summary
                 if cli not in cliIgnore:
-                    output["File"]["Command_Lines"].append(cli["command_line"])
+                    cmdline = cli["command_line"].lower()
+                    cmdline_result = dict(command_line=cmdline)
+                    if cmdline in behavior_generic_dict:
+                        cmdline_result.update({"summary": behavior_generic_dict[cmdline]})
+                    else:
+                        for hit in behavior_generic_dict:
+                            if hit in cmdline:
+                                cmdline_result.update({"summary": behavior_generic_dict[hit]})
+                    output["File"]["Command_Lines"].append(cmdline_result)
         if 'procmemory' in doc:
             for pm in doc["procmemory"]:
                 ntw_mem = pm["urls"]

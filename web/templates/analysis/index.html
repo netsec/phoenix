@@ -1,294 +1,740 @@
 {% extends "base.html" %}
+{% load js %}
+
 {% load staticfiles %}
+{% static "" as baseUrl %}
 {% block content %}
-<script type="text/javascript">
-    $(document).ready( function () {
-        var sortObj = {
-        "order":[[0,"desc"]]
-    };
-    $('#file_table').DataTable(sortObj);
-    $('#url_table').DataTable(sortObj);
-    $('#yara_table').DataTable(sortObj);
-    $('#suricata_table').DataTable(sortObj);
-} );
-</script>
-<ul class="nav nav-tabs">
-    <li class="active"><a href="#files" data-toggle="tab">Files</a></li>
-    <li><a href="#urls" data-toggle="tab">URLs</a></li>
-    <li><a href="#yara_hunts" data-toggle="tab">YARA Hunts</a></li>
-    <li><a href="#suri_hunts" data-toggle="tab">Suricata Hunts</a></li>
-</ul>
+    {% django_js jquery=false %}
+    <style type="text/css">
+        .toolbar {
+            display: inline-block;
+        }
 
-<div class="tab-content">
-    <div class="tab-pane fade in active" id="files">
-        <div class="panel panel-primary">
-            <div class="panel-heading">
-                <h3 class="panel-title">Recent Files</h3>
-            </div>
-            {% if files %}
-            <table class="table table-striped" style="table-layout: fixed;" id="file_table">
-                <thead>
-                <tr>
-                    <th width="150">Timestamp</th>
-                    <th width="200">Filename</th>
-                    <th width="150">MD5</th>
-                    <th width="100">Status</th>
-                    <th>Command Lines</th>
-                    <th>Stage 2+ URLs</th>
-                    <th width="70">YARA</th>
-                    <th width="70">Suricata</th>
-                    <th width="150">Tags</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for analysis in files %}
+        .toolbar label {
+            margin: auto 5px;
+
+        }
+
+        .toolbar button {
+            margin: auto 5px;
+
+        }
+    </style>
+
+
+    <script type="text/javascript">
+        String.prototype.trunc = String.prototype.trunc ||
+            function (n) {
+                return (this.length > n) ? this.substr(0, n - 1) + '&hellip;' : this;
+            };
+        // First, checks if it isn't implemented yet.
+        if (!String.prototype.format) {
+            String.prototype.format = function () {
+                var args = arguments;
+                return this.replace(/{(\d+)}/g, function (match, number) {
+                    return typeof args[number] != 'undefined'
+                        ? args[number]
+                        : ""
+                        ;
+                });
+            };
+        }
+
+
+        $(document).ready(function () {
+            if (localStorage.num_records) {
+                $("#num_records").val(localStorage.num_records.toString());
+            }
+            $.fn.dataTable.moment('YY/MM/DD H:mm');
+            $.fn.dataTable.Responsive.breakpoints[0]["width"] = 2300;
+            $.fn.dataTable.Responsive.breakpoints.push({
+                name: 'superbig',
+                width: Infinity
+            });
+            var sortObj = {
+                "dom": '<"toolbar">Rflipt',
+                "order": [[0, "desc"]]
+
+            };
+            var yaraSortObj = {
+                "dom": 'Rfiptl',
+                "order": [[0, "desc"]],
+
+                'processing': true,
+                'responsive': true,
+                'language': {
+                    'loadingRecords': '<img class="loading" src="{{ baseUrl }}/static/img/loader_gifs/{{  loading_image }}" />',
+                    'processing': 'Loading...'
+                },
+                {#"order": [[0, "desc"]],#}
+                "ajax": {
+                    url: "ajax/yara_data/",
+                    dataSrc: "yara_hunts",
+                    beforeSend: function (xhr, settings) {
+                        if (!localStorage.num_records) {
+                            localStorage.num_records = "25";
+                        }
+                        settings.url += "&num_records=" + localStorage.num_records
+                    }
+                },
+                "columns": [
+                    {
+                        "data": "run_date",
+                        "render": function (data) {
+                            var momentDate = moment(data, "YYYY-MM-DDTHH:mm:ss");
+                            return "<span class= \"sort_field\" > {1}</span><span class= \"muted\" > {0}</span>".format(momentDate.format("YY/MM/DD H:mm"), momentDate.unix())
+                        }
+                    },
+                    {
+                        "data": "uuid",
+                        "render": function (data, type, row) {
+                            if (data) {
+                                return '<a href="{0}">{1}</a>'.format(Django.url("hunting_report", data), data)
+                            }
+                        }
+
+                    },
+                    {
+                        "data": "rule",
+                        "render": function (data, type, row) {
+                            if (data) {
+                                return '<a href="{0}">{1}</a>'.format(Django.url("hunting_yara_file", row.uuid), data)
+                            }
+                        }
+
+                    },
+                    {% comment %}  {
+                          "data": "file_dropped",
+                          "render": function (data, type, row) {
+                              if (!data) {
+                                  return ""
+                              }
+                              var html = "";
+                              data.forEach(file => {
+                                  html += `<ul>
+                                                  <li>File Name: {0}</li>
+                                                  <li>File MD5: <a
+                                                          href="{1}"><span
+                                                          class="mono">{2}</span></a></li>
+                                                  <li>File SHA1: {3}</li>
+                                                  <li>File SHA256: {4}</li>
+                                                  <li>
+                                                      <ul>`.format(file.file_path, Django.url("analysis_file", "dropped", file.object_id), file.file_md5, file.file_sha1, file.file_sha256);
+                                  file.command_line.forEach(commandline => {
+                                      html += `<li>Command Line: {0}</li>
+                                              <li>Parent PID: {1}</li>
+                                              <li>Parent CommandLine:{2}</li>`.format(commandline.command_line.trunc(250), commandline.parent, commandline.parent_command_line.trunc(250))
+                                  });
+                                  html += `</ul>
+                                          </li>
+                                          </ul>`
+                              });
+                              return html;
+                          }
+                      },{% endcomment %}
+                    {
+                        "data": "meta",
+                        "defaultContent": "",
+                        "render": function (data) {
+                            if (data) {
+                                return `  <ul>
+                                            <li>Description: {0}</li>
+                                            <li>Author: {1}</li>
+                                            <li>Filetype: {2}</li>
+                                            <li>MD5: {3}</li>
+                                            <li>Reference: {4}</li>
+                                        </ul>`.format(data.description, data.author, data.filetype, data.md5, data.reference)
+                            }
+                        }
+                    }
+                ]
+            };
+            var urlSortObj = {
+                "dom": 'Rfiptl',
+                "order": [[0, "desc"]],
+
+                'processing': true,
+                'responsive': true,
+                'language': {
+                    'loadingRecords': '<img class="loading" src="{{ baseUrl }}/static/img/loader_gifs/{{  loading_image }}" />',
+                    'processing': 'Loading...'
+                },
+                {#"order": [[0, "desc"]],#}
+                "ajax": {
+                    url: "ajax/url_data/",
+                    dataSrc: "urls",
+                    beforeSend: function (xhr, settings) {
+                        if (!localStorage.num_records) {
+                            localStorage.num_records = "25";
+                        }
+                        settings.url += "&num_records=" + localStorage.num_records
+                    }
+                },
+                "columns": [
+                    {
+                        "data": "started_on",
+                        "render": function (data, type, row) {
+                            if (row.status == "reported") {
+                                var momentDate = moment(row.completed_on, "YYYY-MM-DDTHH:mm:ss")
+                                return "<span class= \"sort_field\" > {1} </span> {0}".format(momentDate.format("YY/MM/DD H:mm"), momentDate.unix())
+                            } else {
+                                var momentDate = moment(row.added_on, "YYYY-MM-DDTHH:mm:ss")
+                                return "<span class= \"sort_field\" > {1}</span><span class= \"muted\" > {0} (addedon)</span>".format(momentDate.format("YY/MM/DD H:mm"), momentDate.unix())
+                            }
+                        },
+                        "responsivePriority": 1
+                    },
+                    {
+                        "data":"target",
+                        "render":function (data, type, row) {
+                            if (data){
+                                if (row.status == "reported"){
+                                    return ` <a href="{0}"><span
+                                                    class="mono">{1}</span></a>`.format(Django.url("analysis_report", row.id),data)
+                                }else{
+                                    return '<span class="mono">{1}</span>'.format(data);
+                                }
+                            }
+
+                        }
+                    },
+                    {
+                        "data":
+                            "status",
+                        "render":
+
+                            function (data, type, row) {
+                                link = "<a href=\"{0}\" target=\"_blank\">".format(Django.url("tldr", row.id));
+                                if (row.status == "pending")
+                                    link += "<span class=\"text-muted\">pending</span>";
+                                else if (row.status == "running")
+                                    link += "<span class=\"text-warning\">running</span>";
+                                else if (row.status == "completed")
+                                    link += "<span class=\"text-info\">completed</span>";
+                                else if (row.status == "reported") {
+                                    if (row.errors)
+                                        link += "<span class=\"text-danger\">";
+                                    else
+                                        link += "<span class=\"text-success\">";
+                                    link += "reported</span>";
+                                }
+                                else
+                                    link += "<span class=\"text-danger\">row.status</span>";
+                                link += "</a>";
+                                return link;
+                            }
+                    }
+                ]
+            }
+            var suriSortObj = {
+                    "dom": 'Rfiptl',
+                    "order": [[0, "desc"]],
+
+                    'processing': true,
+                    'responsive': true,
+                    'language': {
+                        'loadingRecords': '<img class="loading" src="{{ baseUrl }}/static/img/loader_gifs/{{  loading_image }}" />',
+                        'processing': 'Loading...'
+                    },
+                    {#"order": [[0, "desc"]],#}
+                    "ajax": {
+                        url: "ajax/suri_data/",
+                        dataSrc: "suri_hunts",
+                        beforeSend: function (xhr, settings) {
+                            if (!localStorage.num_records) {
+                                localStorage.num_records = "25";
+                            }
+                            settings.url += "&num_records=" + localStorage.num_records
+                        }
+                    },
+                    "columns": [
+                        {
+                            "data": "timestamp",
+                            "render": function (data) {
+                                var momentDate = moment(data, "YYYY-MM-DDTHH:mm:ss");
+                                return "<span class= \"sort_field\" > {1}</span><span class= \"muted\" > {0}</span>".format(momentDate.format("YY/MM/DD H:mm"), momentDate.unix())
+                            }
+                        },
+                        {
+                            "data": "uuid",
+                            "render": function (data) {
+                                if (data) {
+                                    return '<a href="{0}">{1}</a>'.format(Django.url("hunting_report", data), data)
+                                }
+                            }
+
+                        },
+                        {
+                            "data": "alert.signature",
+                            "defaultContent": "",
+                            "render": function (data, type, row) {
+                                if (data) {
+                                    return '<a href="{0}">{1}</a>'.format(Django.url("hunting_suri_file", row.uuid), data)
+                                }
+                            }
+
+                        },
+                        {
+                            "data": "src_ip",
+                            "defaultContent": "",
+                            "render": function (data, type, row) {
+                                if (data) {
+                                    return `<a href="{0}">PCAP</a>
+                                        <ul>
+                                            <li>Source IP: {1}</li>
+                                            <li>Source Port: {2}</li>
+                                            <li>Proto: {3}</li>
+                                            <li>Dest IP: {4}</li>
+                                            <li>Dest Port: {5}</li>
+
+                                        </ul>`.format(Django.url("hunting_pcap", row.analysis_id), row.src_ip, row.src_port, row.proto, row.dest_ip, row.dest_port)
+
+                                }
+                            }
+                        }
+                    ]
+                }
+            ;
+            var fsortObj = {
+                "dom": '<"toolbar">Rfipt<t>l',
+                "order": [[0, "desc"]],
+
+                'processing': true,
+                'responsive': true,
+                'language': {
+                    'loadingRecords': '<img class="loading" src="{{ baseUrl }}/static/img/loader_gifs/{{  loading_image }}" />',
+                    'processing': 'Loading...'
+                },
+                {#"order": [[0, "desc"]],#}
+                "ajax": {
+                    url: "ajax/search_data/",
+                    dataSrc: "files",
+                    beforeSend: function (xhr, settings) {
+                        if (!localStorage.num_records) {
+                            localStorage.num_records = "25";
+                        }
+                        settings.url += "&num_records=" + localStorage.num_records
+                    }
+
+                },
+                "columns": [
+                    {
+                        "data": "started_on",
+                        "render": function (data, type, row) {
+                            if (row.status == "reported") {
+                                var momentDate = moment(row.completed_on, "YYYY-MM-DDTHH:mm:ss")
+                                return "<span class= \"sort_field\" > {1} </span> {0}".format(momentDate.format("YY/MM/DD H:mm"), momentDate.unix())
+                            } else {
+                                var momentDate = moment(row.added_on, "YYYY-MM-DDTHH:mm:ss")
+                                return "<span class= \"sort_field\" > {1}</span><span class= \"muted\" > {0} (addedon)</span>".format(momentDate.format("YY/MM/DD H:mm"), momentDate.unix())
+                            }
+                        },
+                        "responsivePriority": 1
+                    },
+
+                    {
+                        "data": "filename",
+                        "responsivePriority": 7
+                    },
+                    {
+                        "data": "md5",
+                        "render": function (data, type, row) {
+                            var tag = "<span class=\"mono\">{0}</span>".format(data)
+                            if (row.status == "reported" || row.status == "failed_analysis") {
+                                return " <a href=\"{0}\">{1}</a>".format(Django.url("analysis_report", row.id), tag)
+                            }
+                        },
+                        "responsivePriority": 2
+
+                    },
+                    {
+                        "data": "api_matches",
+                        "render": function (data) {
+                            var html = "";
+                            if (data) {
+
+                                data.forEach(function (mongo_match) {
+                                    html += "<span>";
+
+                                    if (mongo_match.process && mongo_match.families) {
+                                        html += mongo_match.process + ": " + mongo_match.families
+                                    }
+                                    html += "</span><br/>";
+
+                                });
+                            }
+                            return html;
+
+                        },
+                        "responsivePriority": 3
+                    }
+                    ,
+                    {
+                        "data":
+                            "tags",
+
+                        "render":
+
+                            function (data) {
+                                var html = "";
+                                data.forEach(function (tag) {
+                                    html += "<a href=\"{0}\" target=\"_blank\">{1}</a><br/>".format(tag.tag_link, tag.tag_name)
+                                });
+                                return html;
+                            }
+
+                        ,
+                        "responsivePriority":
+                            4
+                    }
+                    ,
+                    {
+                        "data":
+                            "status",
+                        "render":
+
+                            function (data, type, row) {
+                                link = "<a href=\"{0}\" target=\"_blank\">".format(Django.url("tldr", row.id));
+                                if (row.status == "pending")
+                                    link += "<span class=\"text-muted\">pending</span>";
+                                else if (row.status == "running")
+                                    link += "<span class=\"text-warning\">running</span>";
+                                else if (row.status == "completed")
+                                    link += "<span class=\"text-info\">completed</span>";
+                                else if (row.status == "reported") {
+                                    if (row.errors)
+                                        link += "<span class=\"text-danger\">";
+                                    else
+                                        link += "<span class=\"text-success\">";
+                                    link += "reported</span>";
+                                }
+                                else
+                                    link += "<span class=\"text-danger\">row.status</span>";
+                                link += "</a>";
+                                return link;
+                            }
+                    }
+                    ,
+                    {
+                        "data": "processes",
+                        "className": "superbig",
+                        "render":
+
+                            function (data, type, row) {
+                                var html = "<ul class=\"dont-break-out\">";
+                                data.forEach(function (process) {
+                                    html += "<li class=\"mono\">" + process.command_line.trunc(250) + "</li>";
+                                })
+                                html += "</ul>";
+                                return html;
+                            }
+                    }
+                    ,
+                    {
+                        "data":
+                            "http",
+                        render:
+                            function (data) {
+                                var html = "<div class=\"dont-break-out\">"
+                                data.forEach(function (http_obj) {
+                                    var urlmask = Django.url('moloch', {
+                                        ip: "",
+                                        host: "",
+                                        src_ip: http_obj.src,
+                                        src_port: http_obj.sport,
+                                        dst_ip: http_obj.dst,
+                                        dst_port: http_obj.dport,
+                                        sid: "",
+                                        date: "168"
+                                    }).replace(/\?/g, '');
+                                    var template = "<span class=\"mono\"><a target=\"_blank\" href=\"{0}\">{1}</a></span> <br/> <span class=\"mono\">${3}</span><br/>".format(urlmask, http_obj.full_url, http_obj.mycat, http_obj.request)
+                                    html += template;
+                                })
+                                html += "</div>"
+                                return html;
+
+                            }
+                    }
+                    ,
+                    {
+                        "name": "yara_matches",
+                        "className": "checkmark-column",
+                        "width": "24px",
+                        "data":
+                            "yara_matches",
+                        "render":
+
+                            function (data) {
+                                if (data.link)
+                                    return "<a href=\"{0}\" title='{1}'><img width=\"24\" src=\"{2}\"></a>".format(data.link, data.matches, "{% static 'images/green_check.png'%}")
+                                else return "<div style=\"display:none\">nosig</div>"
+
+                            }
+
+                        ,
+                        "responsivePriority":
+                            5
+                    }
+                    ,
+                    {
+                        "name": "suri_matches",
+                        "className": "checkmark-column",
+                        "width": "24px",
+                        "data":
+                            "suri_matches",
+                        "render":
+
+                            function (data) {
+                                if (data.link)
+                                    return "<a href=\"{0}\" title=\"{1}\"><img width=\"24\" src=\"{2}\"></a>".format(data.link, data.matches, "{% static 'images/green_check.png'%}")
+                                else return "<div style=\"display:none\">nosig</div>"
+                            }
+
+                        ,
+                        "responsivePriority":
+                            6
+                    }
+
+
+                ]
+            };
+            var fileTable = $('#file_table').DataTable(fsortObj);
+            $('#url_table').DataTable(urlSortObj);
+            $('#yara_table').DataTable(yaraSortObj);
+            $('#suricata_table').DataTable(suriSortObj);
+            $("div.toolbar").html('<button class="btn btn-default btn-xs" id="expandAll">Expand All</button><button class="btn btn-default btn-xs" id="collapseAll">Collapse All</button><label><input type="checkbox" id="yaraFilterCheckbox" />Hide YARA</label><label><input type="checkbox" id="suriFilterCheckbox" />Hide Suricata</label>');
+            $("#num_records").change(function () {
+                localStorage.num_records = $(this).val();
+                location.reload();
+            });
+            // Add event listener for opening and closing details
+            $('#expandAll').on('click', function () {
+                // Expand row details
+                fileTable.rows(':not(.parent)').nodes().to$().find('td:first-child').trigger('click');
+            });
+            $('#collapseAll').on('click', function () {
+                // Collapse row details
+                fileTable.rows('.parent').nodes().to$().find('td:first-child').trigger('click');
+            });
+            $('#yaraFilterCheckbox').click(function () {
+                if ($(this).is(':checked')) {
+                    let dataTable = $('#file_table').DataTable();
+                    dataTable.column('yara_matches:name').search("nosig", false, false).draw();
+                } else {
+                    let dataTable = $('#file_table').DataTable();
+                    dataTable.column("yara_matches:name").search("", false, false).draw();
+                }
+            });
+            $('#suriFilterCheckbox').click(function () {
+                if ($(this).is(':checked')) {
+                    let dataTable = $('#file_table').DataTable();
+                    dataTable.column("suri_matches:name").search("nosig", false, false).draw();
+                } else {
+                    let dataTable = $('#file_table').DataTable();
+                    dataTable.column("suri_matches:name").search("", false, false).draw();
+                }
+            });
+
+        })
+        ;
+    </script>
+    <ul class="nav nav-tabs">
+        <li class="active"><a href="#files" data-toggle="tab">Files</a></li>
+        <li><a href="#urls" data-toggle="tab">URLs</a></li>
+        <li><a href="#yara_hunts" data-toggle="tab">YARA Hunts</a></li>
+        <li><a href="#suri_hunts" data-toggle="tab">Suricata Hunts</a></li>
+    </ul>
+
+    <div class="tab-content">
+        <div class="tab-pane fade in active" id="files">
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <h3 style="float:left" class="panel-title">Recent Files</h3>
+                    <div style="float: right">
+                        Get last
+                        <select style="color:black" title="Number of Records" name="num_records"
+                                id="num_records">
+                            <option value="25">25</option>
+                            <option value="100">100</option>
+                            <option value="250">250</option>
+                            <option value="500">500</option>
+                            <option value="1000">1000</option>
+                            <option value="2500">2500</option>
+                            <option value="5000">5000</option>
+                            <option value="10000">10000</option>
+                        </select> records
+                    </div>
+                    <br clear="all"/>
+                </div>
+
+                <table cellspacing="0" class="table table-striped" id="file_table" style="width: 100%;">
+                    <thead>
                     <tr>
-                        <td width="150">
-                        {% if analysis.status == "reported" %}
-                           <span class="sort_field">{{ analysis.completed_on|date:"Y/m/d H:i" }}</span>{{analysis.completed_on}}
-                        {% else %}
-                            <span class="sort_field">{{ analysis.added_on|date:"Y/m/d H:i" }}</span><span class="muted">{{analysis.added_on}} (added on)</span>
-                        {% endif %}
-                        </td>
-                        <td width="200">
-                            {{analysis.filename}}
-                        </td>
-                        <td width="150" style="word-wrap: break-word;">
-                            {% if analysis.status == "reported" or analysis.status == "failed_analysis" %}
-                                <a href="{% url "analysis.views.report" analysis.id %}"><span class="mono">{{analysis.sample.md5}}</span></a>
-                            {% else %}
-                                <span class="mono">{{analysis.sample.md5}}</span>
-                            {% endif %}
-                        </td>
-                        <td width="100">
-                            <a href="{% url "analysis.views.tldr" analysis.id %}" target="_blank">{% if analysis.status == "pending" %}
-                                <span class="text-muted">pending</span>
-                            {% elif analysis.status == "running" %}
-                                <span class="text-warning">running</span>
-                            {% elif analysis.status == "completed" %}
-                                <span class="text-info">completed</span>
-                            {% elif analysis.status == "reported" %}
-                                {% if analysis.errors %}
-                                    <span class="text-danger">
-                                {% else %}
-                                    <span class="text-success">
-                                {% endif%}
+                        <th>Timestamp</th>
+                        <th>Filename</th>
+                        <th>MD5</th>
+                        <th>API Fingerprints</th>
+                        <th>Tags</th>
+                        <th>Status</th>
+                        <th>Command Lines</th>
+                        <th>Stage 2+ URLs</th>
+                        <th>YARA</th>
+                        <th>Suricata</th>
 
-                                reported</span>
-                            {% else %}
-                                <span class="text-danger">{{analysis.status}}</span>
-                            {% endif %}
-                           </a>
-                        </td>
-                        <td>
-                            <ul>{% for process in analysis.processes %}
-                            <li class="mono">{{process.command_line|truncatechars:250}}</li>
-                                {% endfor %}</ul>
-
-                        </td>
-                        <td>
-                            {% for myurl in analysis.https %}
-                            <span class="mono"><a target="_blank" href="{% url "analysis.views.moloch" src_ip=myurl.src src_port=myurl.sport dst_ip=myurl.dst dst_port=myurl.dport %}">{{myurl.full_url}} ({{myurl.mycat}})</a></span><br/>
-                            <span class="mono">{{myurl.request|truncatechars:125}}</span><br/>
-                            {% endfor %}
-                            {% for myurl in analysis.http %}
-                            <span class="mono"><a target="_blank" href="{% url "analysis.views.moloch" src_ip=myurl.src src_port=myurl.sport dst_ip=myurl.dst dst_port=myurl.dport %}">{{myurl.full_url}} ({{myurl.mycat}})</a></span><br/>
-                            <span class="mono">{{myurl.request|truncatechars:125}}</span><br/>
-                            {% endfor %}
-                        </td>
-                     <td width="70" align="center">
-                    {% if analysis.yara_matches %}
-                        <a href="{{ analysis.yara_matches.link }}" title="{{ analysis.yara_matches.matches }}"><img width="24" src="{% static "images/green_check.png" %}"></a>
-
-{#                    {% else %}#}
-{#                         <img src="{% static "images/red_cross.png" %}"/>#}
-
-                    {% endif %}
-
-                </td>
-                     <td width="70" align="center">
-                    {% if analysis.suri_matches %}
-                        <a href="{{ analysis.suri_matches.link }}" title="{{ analysis.suri_matches.matches }}"><img width="24" src="{% static "images/green_check.png" %}"></a>
-
-{#                    {% else %}#}
-{#                         <img src="{% static "images/red_cross.png" %}"/>#}
-
-                    {% endif %}
-
-                </td>
-                    <td width="150" align="center">
-                        {% if analysis.tags %}
-                            {% for tag in analysis.tags %}
-                                <a href="{{ tag.tag_link }}" target="_blank">{{ tag.tag_name }}</a><br />
-                            {% endfor %}
-                        {% endif %}
-                    </td>
                     </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <div class="panel-body">No files analyzed yet.</div>
-            {% endif %}
-        </div>
-    </div>
+                    </thead>
+                </table>
 
-    <div class="tab-pane fade" id="urls">
-        <div class="panel panel-primary">
-            <div class="panel-heading">
-                <h3 class="panel-title">Recent URLs</h3>
             </div>
-            {% if urls %}
-            <table class="table table-striped" style="table-layout: fixed;" id="url_table">
-                <thead>
-                <tr>
-                    <th>Timestamp</th>
-                    <th>URL</th>
-                    <th>Status</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for analysis in urls %}
-                    <tr>
-                        <td>
-                        {% if analysis.status == "reported" %}
-                            <span class="sort_field">{{ analysis.completed_on|date:"Y/m/d H:i" }}</span>{{analysis.completed_on}}
-                        {% else %}
-                            <span class="sort_field">{{ analysis.added_on|date:"Y/m/d H:i" }}</span><span class="muted">{{analysis.added_on}} (added on)</span>
-                        {% endif %}
-                        </td>
-                        <td style="word-wrap: break-word;">
-                            {% if analysis.status == "reported" %}
-                                <a href="{% url "analysis.views.report" analysis.id %}"><span class="mono">{{analysis.target}}</span></a></td>
-                            {% else %}
-                                <span class="mono">{{analysis.target}}</span>
-                            {% endif %}
-                        <td>
-                            {% if analysis.status == "pending" %}
-                                <span class="text-muted">pending</span>
-                            {% elif analysis.status == "running" %}
-                                <span class="text-warning">running</span>
-                            {% elif analysis.status == "completed" %}
-                                <span class="text-info">completed</span>
-                            {% elif analysis.status == "reported" %}
-                                <span class="text-success">reported</span>
-                            {% else %}
-                                <span class="text-danger">{{analysis.status}}</span>
-                            {% endif %}
-                        </td>
-
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <div class="panel-body">No URLs analyzed yet.</div>
-            {% endif %}
         </div>
-    </div>
-    <div class="tab-pane fade" id="yara_hunts">
-        <div class="panel panel-primary">
-            <div class="panel-heading">
-                <h3 class="panel-title">Recent YARA Hunts</h3>
+
+        <div class="tab-pane fade" id="urls">
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Recent URLs</h3>
+                </div>
+{#                {% if urls %}#}
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="url_table" style="width: 100%;">
+                            <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>URL</th>
+                                <th>Status</th>
+                            </tr>
+                            </thead>
+                          {% comment %}  <tbody>
+                            {% for analysis in urls %}
+                                <tr>
+                                    <td>
+                                        {% if analysis.status == "reported" %}
+                                            <span class="sort_field">{{ analysis.completed_on|date:"Y/m/d H:i" }}</span>
+                                            {{ analysis.completed_on }}
+                                        {% else %}
+                                            <span class="sort_field">{{ analysis.added_on|date:"Y/m/d H:i" }}</span>
+                                            <span class="muted">{{ analysis.added_on }} (added on)</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="word-wrap: break-word;">
+                                        {% if analysis.status == "reported" %}
+                                            <a href="{% url "analysis.views.report" analysis.id %}"><span
+                                                    class="mono">{{ analysis.target }}</span></a></td>
+                                        {% else %}
+                                            <span class="mono">{{ analysis.target }}</span>
+                                        {% endif %}
+                                    <td>
+                                        {% if analysis.status == "pending" %}
+                                            <span class="text-muted">pending</span>
+                                        {% elif analysis.status == "running" %}
+                                            <span class="text-warning">running</span>
+                                        {% elif analysis.status == "completed" %}
+                                            <span class="text-info">completed</span>
+                                        {% elif analysis.status == "reported" %}
+                                            <span class="text-success">reported</span>
+                                        {% else %}
+                                            <span class="text-danger">{{ analysis.status }}</span>
+                                        {% endif %}
+                                    </td>
+
+                                </tr>
+                            {% endfor %}{% endcomment %}
+                            </tbody>
+                        </table>
+                    </div>
+{% comment %}                {% else %}
+                    <div class="panel-body">No URLs analyzed yet.</div>
+                {% endif %}{% endcomment %}
             </div>
-            {% if yara_hunts %}
-            <table class="table table-striped" style="table-layout: fixed;" id="yara_table">
-                <thead>
-                <tr>
-                    <th>Timestamp</th>
-                    <th>Rule Name</th>
-                    <th>Dropped Files</th>
-                    <th>Meta</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for yhunt in yara_hunts %}
-                    <tr>
-                        <td><a href="{% url "analysis.views.report" yhunt.analysis_id%}">{{yhunt.run_date}}</a> </td>
-                        <td><a href="/hunting/yara_file/{{yhunt.uuid}}">{{ yhunt.rule }}</a></td>
-                        <td>
-                            {% for file in yhunt.file_dropped %}
-                            <ul>
-                                <li>File Name: {{file.file_path}}</li>
-                                <li>File MD5: <a href="{% url "analysis.views.file" "dropped" file.object_id%}"><span class="mono">{{file.file_md5}}</span></a></li>
-                                <li>File SHA1: {{file.file_sha1}}</li>
-                                <li>File SHA256: {{file.file_sha256}}</li>
-                                <li>
-                                    <ul>
-                                        {% for commandline in file.command_line %}
-                                        <li>Command Line: {{commandline.command_line|truncatechars:250}}</li>
-                                        <li>Parent PID: {{commandline.parent}}</li>
-                                        <li>Parent Command Line: {{commandline.parent_command_line|truncatechars:250}}</li>
+        </div>
+        <div class="tab-pane fade" id="yara_hunts">
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Recent YARA Hunts</h3>
+                </div>
+                {#                {% if yara_hunts %}#}
+                <div class="table-responsive">
+                    <table cellspacing="0" class="table table-striped" id="yara_table" style="width: 100%;">
+                        <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>UUID</th>
+                            <th>Rule Name</th>
+                            {% comment %}<th>Dropped Files</th>{% endcomment %}
+                            <th>Meta</th>
+                        </tr>
+                        </thead>
+                        {% comment %}                            <tbody>
+                            {% for yhunt in yara_hunts %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url "analysis.views.report" yhunt.analysis_id %}">{{ yhunt.run_date }}</a>
+                                    </td>
+                                    <td><a href="/hunting/yara_file/{{ yhunt.uuid }}">{{ yhunt.rule }}</a></td>
+                                    <td>
+                                        {% for file in yhunt.file_dropped %}
+                                            <ul>
+                                                <li>File Name: {{ file.file_path }}</li>
+                                                <li>File MD5: <a
+                                                        href="{% url "analysis.views.file" "dropped" file.object_id %}"><span
+                                                        class="mono">{{ file.file_md5 }}</span></a></li>
+                                                <li>File SHA1: {{ file.file_sha1 }}</li>
+                                                <li>File SHA256: {{ file.file_sha256 }}</li>
+                                                <li>
+                                                    <ul>
+                                                        {% for commandline in file.command_line %}
+                                                            <li>Command
+                                                                Line: {{ commandline.command_line|truncatechars:250 }}</li>
+                                                            <li>Parent PID: {{ commandline.parent }}</li>
+                                                            <li>Parent Command
+                                                                Line: {{ commandline.parent_command_line|truncatechars:250 }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </li>
+                                            </ul>
                                         {% endfor %}
-                                    </ul>
-                                </li>
-                            </ul>
+
+                                    </td>
+                                    <td>
+                                        <ul>
+                                            <li>Description: {{ yhunt.meta.description }}</li>
+                                            <li>Author: {{ yhunt.meta.author }}</li>
+                                            <li>Filetype: {{ yhunt.meta.filetype }}</li>
+                                            <li>MD5: {{ yhunt.meta.md5 }}</li>
+                                            <li>Reference: {{ yhunt.meta.reference }}</li>
+
+                                        </ul>
+
+                                    </td>
+                                </tr>
                             {% endfor %}
-
-                        </td>
-                        <td>
-                            <ul>
-                                <li>Description: {{yhunt.meta.description}}</li>
-                                <li>Author: {{yhunt.meta.author}}</li>
-                                <li>Filetype: {{yhunt.meta.filetype}}</li>
-                                <li>MD5: {{yhunt.meta.md5}}</li>
-                                <li>Reference: {{yhunt.meta.reference}}</li>
-
-                            </ul>
-
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <div class="panel-body">No Hunts run yet.</div>
-            {% endif %}
-        </div>
-    </div>
-    <div class="tab-pane fade" id="suri_hunts">
-        <div class="panel panel-primary">
-            <div class="panel-heading">
-                <h3 class="panel-title">Recent Suricata Hunts</h3>
+                            </tbody>{% endcomment %}
+                    </table>
+                </div>
+                {% comment %}  {% else %}
+                    <div class="panel-body">No Hunts run yet.</div>
+                {% endif %}{% endcomment %}
             </div>
-            {% if suri_hunts %}
-            <table class="table table-striped" style="table-layout: fixed;" id="suricata_table">
-                <thead>
-                <tr>
-                    <th>Timestamp</th>
-                    <th>UUID</th>
-                    <th>Signature</th>
-                    <th>IP Details</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for shunt in suri_hunts %}
-                <tr>
-                    <td><a href="{% url "analysis.views.report" shunt.analysis_id%}">{{shunt.timestamp}}</a> </td>
-                    <td>{{shunt.uuid}}</td>
-                    <td><a href="/hunting/suri_file/{{shunt.uuid}}">{{ shunt.alert.signature}}</a></td>
-                    <td>
-                        <a href="{% url "hunting.views.pcap" shunt.analysis_id%}">PCAP</a>
-                        <ul>
-                            <li>Source IP: {{shunt.src_ip}}</li>
-                            <li>Source Port: {{shunt.src_port}}</li>
-                            <li>Proto: {{shunt.proto}}</li>
-                            <li>Dest IP: {{shunt.dest_ip}}</li>
-                            <li>Dest Port: {{shunt.dest_port}}</li>
-
-                        </ul>
-
-                    </td>
-
-                </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <div class="panel-body">No Hunts run yet.</div>
-            {% endif %}
         </div>
-    </div>
+        <div class="tab-pane fade" id="suri_hunts">
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Recent Suricata Hunts</h3>
+                </div>
+                <div class="table-responsive">
+                    <table cellspacing="0" class="table table-striped" id="suricata_table" style="width: 100%;">
+                        <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>UUID</th>
+                            <th>Signature</th>
+                            <th>IP Details</th>
+                        </tr>
+                        </thead>
+                    </table>
+                </div>
 
-</div>
+            </div>
+        </div>
+
+    </div>
 {% endblock %}

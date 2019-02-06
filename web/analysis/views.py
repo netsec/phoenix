@@ -9,16 +9,19 @@ import fnmatch
 import json
 import mimetypes
 import os
+import random
 import re
 import sys
 import urllib
 import zipfile
+import cProfile
+import pandas as pd
 
 from cStringIO import StringIO
 
 from bson.objectid import ObjectId
 from django.conf import settings
-from django.http import HttpResponse, StreamingHttpResponse, FileResponse
+from django.http import HttpResponse, StreamingHttpResponse, FileResponse, JsonResponse
 from django.contrib.auth.decorators import login_required, user_passes_test
 
 from django.shortcuts import render, redirect
@@ -35,22 +38,27 @@ from lib.cuckoo.common.config import Config
 
 sys.path.insert(0, settings.CUCKOO_PATH)
 
-from lib.cuckoo.core.database import Database, TASK_PENDING, TASK_COMPLETED, TASK_REPORTED
+from lib.cuckoo.core.database import Database, TASK_PENDING, TASK_COMPLETED, TASK_REPORTED, Task
 from lib.cuckoo.common.utils import store_temp_file, versiontuple
 from lib.cuckoo.common.constants import CUCKOO_ROOT, LATEST_HTTPREPLAY
 from lib.tldr.tldr import run_tldr
+from lib.api_fingerprint.api_fingerprint import run_one as run_one_api
+from lib.api_fingerprint.api_fingerprint import process_mongo_obj as process_mongo_obj_api
 import modules.processing.network as network
 from helpers import convert_hit_to_template
-from pymongo import MongoClient
+from pymongo import MongoClient, CursorType
 from elasticsearch import Elasticsearch
 from pymisp import PyMISP
 import urlparse
 import MySQLdb
+import cProfile
 
 config = Config("reporting")
 options = config.get("z_misp")
 misp_url = options["url"]
 misp = PyMISP(misp_url, options["apikey"], False)
+
+db = Database()
 
 results_db = settings.MONGO
 fs = GridFS(results_db)
@@ -59,64 +67,129 @@ for domain in open(os.path.join(CUCKOO_ROOT, "data", "whitelist", "domain.txt"))
     domains.add(domain.strip())
 
 
-def getMongoObj(taskid):
+def getMongoObj(taskid_list):
     # TODO: Make Mongo host config-based
     client = settings.MONGO
 
-    cursor = client.analysis.find({"info.id": taskid},
-                                  {"behavior.processes": "1", "network.http_ex": "1", "network.https_ex": "1"})
+    id_list = [int(taskid) for taskid in taskid_list]
+    cursor = client.analysis.find({"info.id": {"$in": id_list}},
+                                  {"behavior.processes.command_line": "1", "network.http_ex": "1",
+                                   "network.https_ex": "1", "target.file.md5": "1", "behavior.generic": 1,
+                                   "behavior.apistats": 1, "info.id": "1"})
     return cursor
 
 
 @require_safe
 @login_required
 def index(request):
+    # response_obj = get_data(request)
 
-    db = Database()
-    misp = PyMISP(misp_url, options["apikey"], False)
+    list_images = os.listdir(os.path.join(os.path.dirname(__file__), "../static/img/loader_gifs"))
+    image = random.choice(list_images)
+    return render(request, "analysis/index.html", {"loading_image": image})
 
-    # TODO: add stuff for when user is not logged in
-    tasks_files = db.list_tasks(limit=500, category="file", status=TASK_REPORTED, tlpuser=request.user.username,
-                                tlpamberusers=get_tlp_users(request.user))
-    tasks_urls = db.list_tasks(limit=500, category="url", status=TASK_REPORTED, tlpuser=request.user.username,
-                               tlpamberusers=get_tlp_users(request.user))
+
+def search_data(request):
+    num_records = int(request.GET.get('num_records', '25'))
+    response_obj = get_data(request, num_records)
+    return JsonResponse(response_obj)
+
+
+def suri_data(request):
+    suri_query = create_tlp_query(request.user, {"term": {"_type": "suricata"}})
+    es = settings.ELASTIC
+    tasks_surihunts = es.search(index="hunt-*", body=suri_query)
+    suri_return = []
+    analyses_surihunts = [convert_hit_to_template(c) for c in tasks_surihunts['hits']['hits']]
+
+    if analyses_surihunts:
+        df = pd.DataFrame(analyses_surihunts)
+        df["signature"] = df["alert"].apply(lambda x: x.get("signature"))
+        suri_return = json.loads(df.groupby(["uuid", "signature"]).first().reset_index().to_json(orient='records'))
+    return JsonResponse({
+        "suri_hunts": suri_return
+    })
+
+
+def yara_data(request):
     es = settings.ELASTIC
     yara_query = create_tlp_query(request.user, {"term": {"_type": "yara"}})
-    suri_query = create_tlp_query(request.user, {"term": {"_type": "suricata"}})
+    # TODO: Make this aggregation happen in ES
+    # yara_query["aggs"] = {"uuid": {"terms": {"field": "uuid.raw"}, "aggregations": {"rule": {"terms": {"field": "rule.raw"}}}}}
     tasks_yhunts = es.search(index="hunt-*", body=yara_query)
-    tasks_surihunts = es.search(index="hunt-*", body=suri_query)
-    analyses_files = []
-    analyses_urls = []
+    yara_return = []
     analyses_yhunts = [convert_hit_to_template(c) for c in tasks_yhunts['hits']['hits']]
-    analyses_surihunts = [convert_hit_to_template(c) for c in tasks_surihunts['hits']['hits']]
+
+    if analyses_yhunts:
+        analyses_yhunts.sort(reverse=True)
+        df = pd.DataFrame(analyses_yhunts)
+        yara_return=json.loads(df.groupby(["uuid","rule"]).first().reset_index().to_json(orient='records'))
+    return JsonResponse({
+        "yara_hunts": yara_return
+    })
+
+
+def url_data(request):
+    num_records = int(request.GET.get('num_records', '25'))
+
+    tasks_urls = db.list_tasks(limit=num_records, order_by=Task.completed_on.desc(), category="url",
+                               status=TASK_REPORTED, tlpuser=request.user.username,
+                               tlpamberusers=get_tlp_users(request.user))
+
+    analyses_urls = []
+    for task in tasks_urls:
+        new = task.to_dict()
+
+        if db.view_errors(task.id):
+            new["errors"] = True
+
+        analyses_urls.append(new)
+    return JsonResponse({"urls": analyses_urls})
+
+
+def get_data(request, num_records):
+    # pr = cProfile.Profile()
+    # pr.enable()
+    misp = PyMISP(misp_url, options["apikey"], False)
+    # TODO: add stuff for when user is not logged in
+    tasks_files = db.list_tasks(limit=num_records, order_by=Task.completed_on.desc(), category="file",
+                                status=TASK_REPORTED, tlpuser=request.user.username,
+                                tlpamberusers=get_tlp_users(request.user))
+
+    analyses_files = []
     if tasks_files:
         misp_tags = check_misp_errors(misp.get_all_tags(), "Can't get tags from MISP")["Tag"]
         tags_dict = {misp_item["id"]: misp_item for misp_item in misp_tags}
         mysqldb = MySQLdb.connect(host=options["mysql_host"],
-                             user=options["mysql_user"],
-                             passwd=options["mysql_password"],
-                             db="misp")
+                                  user=options["mysql_user"],
+                                  passwd=options["mysql_password"],
+                                  db="misp")
         id_cur = mysqldb.cursor()
-        eventinfos = {"\"Phoenix Sandbox analysis #{0}\"".format(task_file.id): int(task_file.id) for task_file in tasks_files}
-        id_cur.execute('select max(id), info from events where info in ({0}) group by info'.format(",".join(eventinfos.keys())))
+        eventinfos = {"\"Phoenix Sandbox analysis #{0}\"".format(task_file.id): int(task_file.id) for task_file in
+                      tasks_files}
+        id_cur.execute(
+            'select max(id), info from events where info in ({0}) group by info'.format(",".join(eventinfos.keys())))
 
-        misp_ids = {eventinfos["\"{0}\"".format(id[1])]:int(id[0]) for id in id_cur.fetchall()}
+        misp_ids = {eventinfos["\"{0}\"".format(id[1])]: int(id[0]) for id in id_cur.fetchall()}
         misp_tags = {}
         misp_atts = {}
         if id_cur.rowcount:
             event_id_strings = ','.join(str(intid) for intid in misp_ids.values())
-            #misp_ids = ','.join([id[0] for id in id_cur.fetch_all()])
+            # misp_ids = ','.join([id[0] for id in id_cur.fetch_all()])
 
             tag_cur = mysqldb.cursor()
-            tag_cur.execute('select t.name, t.id, et.event_id from event_tags et inner join tags t on et.tag_id = t.id where et.event_id in ({0})'.format(
-                event_id_strings))
+            tag_cur.execute(
+                'select t.name, t.id, et.event_id from event_tags et inner join tags t on et.tag_id = t.id where et.event_id in ({0})'.format(
+                    event_id_strings))
             for rows in tag_cur.fetchall():
                 if int(rows[2]) not in misp_tags:
                     misp_tags[int(rows[2])] = []
                 misp_tags[int(rows[2])].append(dict(name=rows[0], id=rows[1]))
 
             att_cur = mysqldb.cursor()
-            att_cur.execute('select a.value1, a.type, o.event_id from objects o inner join attributes a on o.id = a.object_id where o.template_uuid in ("3c177337-fb80-405a-a6c1-1b2ddea8684a","b5acf82e-ecca-4868-82fe-9dbdf4d808c3") and o.event_id in ({0}) and a.id in (select max(a1.id) from attributes a1 where a1.event_id in ({0}) group by a1.event_id, type);'.format(event_id_strings))
+            att_cur.execute(
+                'select a.value1, a.type, o.event_id from objects o inner join attributes a on o.id = a.object_id where o.template_uuid in ("3c177337-fb80-405a-a6c1-1b2ddea8684a","b5acf82e-ecca-4868-82fe-9dbdf4d808c3") and o.event_id in ({0}) and a.id in (select max(a1.id) from attributes a1 where a1.event_id in ({0}) group by a1.event_id, type);'.format(
+                    event_id_strings))
 
             for rows in att_cur.fetchall():
                 if int(rows[2]) not in misp_atts:
@@ -124,38 +197,52 @@ def index(request):
                 misp_atts[int(rows[2])][rows[1]] = rows[0]
 
         mysqldb.close()
-        for task in tasks_files:
+        file_ids = [task.id for task in tasks_files]
+        file_objects = {m["info"]["id"]: m for m in getMongoObj(file_ids)}
+        # file_objects = list(getMongoObj(file_ids))
+        for task_index, task in enumerate(tasks_files):
+            if task.id not in file_objects:
+                print "{0} not in objects returned from mongo".format(task.id)
+                continue
             new = task.to_dict()
-            new["sample"] = db.view_sample(new["sample_id"]).to_dict()
+            # TODO: Degrease this please
+            new["processes"] = []
+            new["http"] = []
+            new["yara_matches"] = []
+            new["suri_matches"] = []
+            new["api_matches"] = {}
+            # new["sample"] = db.view_sample(new["sample_id"]).to_dict()
             analysis_id = new["id"]
-            mobj = getMongoObj(analysis_id)
-            for m in mobj:
-                if 'behavior' in m:
-                    new["processes"] = m["behavior"]["processes"]
-                myhttp = []
-                if ('network' in m) and ('https_ex' in m["network"]):
-                    for mht in list(m["network"]["https_ex"] + m["network"]["http_ex"])[:4]:
-                        if mht["host"] not in domains:
-                            full_url = mht["protocol"] + '://' + mht["host"] + '/' + mht["uri"]
-                            # TODO: Fix Bluecoat
-                            # mycat = bluecoat_sitereview(full_url)
-                            mht["full_url"] = full_url
-                            # mht["category"] = mycat
-                            myhttp.append(mht)
+            m = file_objects[analysis_id]
+            # for m in mobj:
+            if 'behavior' in m:
+                new["processes"] = m["behavior"]["processes"]
+            myhttp = []
+            if ('network' in m) and ('https_ex' in m["network"]):
+                for mht in list(m["network"]["https_ex"] + m["network"]["http_ex"])[:4]:
+                    if mht["host"] not in domains:
+                        full_url = mht["protocol"] + '://' + mht["host"] + '/' + mht["uri"]
+                        # TODO: Fix Bluecoat
+                        # mycat = bluecoat_sitereview(full_url)
+                        mht["full_url"] = full_url
+                        # mht["category"] = mycat
+                        myhttp.append(mht)
 
-                # if ('network' in m) and ('http_ex' in m["network"]):
-                #     for mh in m["network"]["http_ex"]:
-                #         if mh["host"] not in domains:
-                #             full_url = mh["protocol"] + '://' + mh["host"] + '/' + mh["uri"]
-                #             # TODO: Fix Bluecoat
-                #             # mycat = bluecoat_sitereview(full_url)
-                #             mh["full_url"] = full_url
-                #             # mh["category"] = mycat
-                #             myhttp.append(mh)
+            # if ('network' in m) and ('http_ex' in m["network"]):
+            #     for mh in m["network"]["http_ex"]:
+            #         if mh["host"] not in domains:
+            #             full_url = mh["protocol"] + '://' + mh["host"] + '/' + mh["uri"]
+            #             # TODO: Fix Bluecoat
+            #             # mycat = bluecoat_sitereview(full_url)
+            #             mh["full_url"] = full_url
+            #             # mh["category"] = mycat
+            #             myhttp.append(mh)
 
-                if myhttp:
-                    new["http"] = myhttp
+            new["http"] = myhttp
             filename = os.path.basename(new["target"])
+            if "target" in m and "file" in m["target"] and "md5" in m["target"]["file"]:
+                new["md5"] = m["target"]["file"]["md5"]
+
             new.update({"filename": filename})
 
             if db.view_errors(task.id):
@@ -204,25 +291,14 @@ def index(request):
                         "tag_link": options["external_url"] + "/events/index/searchtag:{0}".format(tag_id)
                     })
             new.update({"tags": tags_to_add})
+            new.update({"api_matches": process_mongo_obj_api(m)})
             analyses_files.append(new)
 
-    if tasks_urls:
-        for task in tasks_urls:
-            new = task.to_dict()
-
-            if db.view_errors(task.id):
-                new["errors"] = True
-
-            analyses_urls.append(new)
-    analyses_yhunts.sort(reverse=True)
-
-
-    return render(request, "analysis/index.html", {
+    # pr.disable()
+    # pr.dump_stats('profile5.pstat')
+    return {
         "files": analyses_files,
-        "urls": analyses_urls,
-        "yara_hunts": analyses_yhunts,
-        "suri_hunts": analyses_surihunts
-    })
+    }
 
 
 def get_misp_event(analysis_id):
@@ -232,13 +308,17 @@ def get_misp_event(analysis_id):
         misp.search_index(eventinfo="Phoenix Sandbox analysis #" + str(analysis_id)),
         "Couldn't search MISP for {0}".format(str(
             analysis_id)))
-    return search_result["response"] if search_result else None
+    if search_result:
+        return reduce(
+            lambda x, y: y if y["timestamp"] > x["timestamp"] and y["info"] == "Phoenix Sandbox analysis #" + str(
+                analysis_id) else x, search_result["response"])
+    else:
+        return None
 
 
 @require_safe
 @login_required
 def pending(request):
-    db = Database()
     tasks = db.list_tasks(status=TASK_PENDING)
 
     pending = []
@@ -548,7 +628,7 @@ def misp(request, task_id):
 
         misp_event = get_misp_event(task_id)
         if misp_event:
-            return redirect(options["external_url"] + "/events/view/" + misp_event[-1]["id"])
+            return redirect(options["external_url"] + "/events/view/" + misp_event["id"])
         else:
             return HttpResponse("No MISP Report found")
 
@@ -586,7 +666,7 @@ def moloch(request, **kwargs):
 
     query = []
     for key, value in kwargs.items():
-        if value and value != "None":
+        if value and value != "None" and key != "date":
             query.append(moloch_mapper[key] % value)
 
     if ":" in request.get_host():
@@ -601,9 +681,9 @@ def moloch(request, **kwargs):
 
     url += "%s%s/?%s" % (
         settings.MOLOCH_HOST or hostname,
-        ":"+settings.MOLOCH_PORT if settings.MOLOCH_PORT else "",
+        ":" + settings.MOLOCH_PORT if settings.MOLOCH_PORT else "",
         urllib.urlencode({
-            "date": "-1",
+            "date": kwargs["date"] if kwargs.get("date") else "168",
             "expression": " && ".join(query),
         }),
     )
@@ -756,7 +836,6 @@ def remove(request, task_id):
         results_db.analysis.remove({"_id": ObjectId(analysis["_id"])})
 
     # Delete from SQL db.
-    db = Database()
     db.delete_task(task_id)
 
     return render(request, "success.html", {
@@ -920,7 +999,6 @@ def import_analysis(request):
     if request.method == "GET":
         return render(request, "analysis/import.html")
 
-    db = Database()
     task_ids = []
 
     for analysis in request.FILES.getlist("analyses"):
@@ -1036,7 +1114,7 @@ def import_analysis(request):
 
 @login_required
 def reboot_analysis(request, task_id):
-    task_id = Database().add_reboot(task_id=task_id)
+    task_id = db.add_reboot(task_id=task_id)
 
     return render(request, "submission/reboot.html", {
         "task_id": task_id,
@@ -1046,5 +1124,5 @@ def reboot_analysis(request, task_id):
 
 def check_misp_errors(response, error_str):
     if "errors" in response:
-        raise Exception("{0}: {1}".format(error_str,response["errors"][-1]))
+        raise Exception("{0}: {1}".format(error_str, response["errors"][-1]))
     return response

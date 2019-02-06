@@ -10,6 +10,7 @@ import argparse
 import traceback
 from pathos.multiprocessing import Pool
 import multiprocessing as mp
+from pymisp import PyMISP
 
 sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), ".."))
 from lib.cuckoo.common.config import Config
@@ -75,6 +76,11 @@ def republish_event(eid):
     content = json.load(resp)
     return content
 
+def delete_attributes(search_string):
+    # results=misp.search(controller="attributes", values="%adobe.com%", type_attribute="url")
+    #  misp.delete_attribute(id="6844308")
+    pass
+    
 
 def main(argv):
     parser = argparse.ArgumentParser(description='MISP API script')

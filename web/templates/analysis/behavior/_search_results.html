@@ -16,14 +16,15 @@
         <span class="badge synchronization" style="color:black;">synchronization</span>
     </p>
     {% if results %}
-        <table class="table table-bordered" style="table-layout: fixed;">
+        <div class="table-responsive">
+        <table class="table table-bordered " style="font-size:7pt">
             <thead>
                 <tr>
-                    <th width="15%">Time &amp; API</th>
-                    <th width="65%">Arguments</th>
-                    <th width="5%">Status</th>
-                    <th width="10%">Return</th>
-                    <th width="5%">Repeated</th>
+                    <th >Time &amp; API</th>
+                    <th >Arguments</th>
+                    <th >Status</th>
+                    <th >Return</th>
+                    <th >Repeated</th>
                 </tr>
             </thead>
             <tbody>
@@ -41,6 +42,7 @@
             {% endfor %}
             </tbody>
         </table>
+        </div>
     {% else %}
         <p>No results</p>
     {% endif %}

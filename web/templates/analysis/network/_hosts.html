@@ -14,7 +14,7 @@
                         {% if host|isdeadip:analysis %}
                             (dead IP/port - was unable to connect during analysis)
                         {% endif %}
-                    </a>
+                    </a>{% rl_link "ipv4" host%}{% vt_link "ip-address" host%}
                 </td>
                 {% endif %}
             </tr>

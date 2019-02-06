@@ -9,6 +9,7 @@ from lib.cuckoo.common.constants import CUCKOO_ROOT
 
 domains = set()
 urls = set()
+ips = set()
 
 def is_whitelisted_domain(domain):
     return domain in domains

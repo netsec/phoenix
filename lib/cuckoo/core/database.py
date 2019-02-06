@@ -7,7 +7,7 @@ import os
 import json
 import logging
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from lib.cuckoo.common.config import Config, parse_options, emit_options
 from lib.cuckoo.common.constants import CUCKOO_ROOT
@@ -465,7 +465,7 @@ class Database(object):
                 # See: http://www.postgresql.org/docs/9.0/static/libpq-ssl.html#LIBPQ-SSL-SSLMODE-STATEMENTS
                 self.engine = create_engine(connection_string, connect_args={"sslmode": "disable"})
             else:
-                self.engine = create_engine(connection_string)
+                self.engine = create_engine(connection_string, pool_recycle=3600, pool_pre_ping=True)
         except ImportError as e:
             lib = e.message.split()[-1]
             raise CuckooDependencyError(
@@ -1168,7 +1168,7 @@ class Database(object):
         return add(task.target, task.timeout, task.package, options,
                    task.priority, task.custom, task.owner, task.machine,
                    task.platform, tags, task.memory, task.enforce_timeout,
-                   task.clock)
+                   task.clock, task.tlp)
 
     def list_tasks(self, limit=None, details=True, category=None, owner=None,
                    offset=None, status=None, sample_id=None, not_status=None,
@@ -1248,18 +1248,24 @@ class Database(object):
             session.close()
 
     @classlock
-    def count_tasks(self, status=None):
+    def count_tasks(self, status=None, hours=24):
         """Count tasks in the database
         @param status: apply a filter according to the task status
         @return: number of tasks found
+        :param hours: hours, or none for all
         """
         session = self.Session()
         try:
+            if status == "pending":
+                tasks_query = session.query(Task).filter_by(status=status)
+                return tasks_query.count()
             if status:
-                tasks_count = session.query(Task).filter_by(status=status).count()
+                tasks_query = session.query(Task).filter_by(status=status)
             else:
-                tasks_count = session.query(Task).count()
-            return tasks_count
+                tasks_query = session.query(Task)
+            if hours:
+                tasks_query = tasks_query.filter(Task.completed_on > datetime.now() - timedelta(hours=hours))
+            return tasks_query.count()
         except SQLAlchemyError as e:
             log.debug("Database error counting tasks: {0}".format(e))
             return 0
@@ -1320,7 +1326,7 @@ class Database(object):
         except AttributeError:
             return None
         except SQLAlchemyError as e:
-            log.debug("Database error viewing task: {0}".format(e))
+            log.debug("Database error getting sample: {0}".format(e))
             return None
         else:
             if sample:
@@ -1419,6 +1425,22 @@ class Database(object):
             session.close()
         return errors
 
+    def get_email_for_user(self, username):
+        session = self.Session()
+        try:
+            query = 'select email from auth_user where username=:username'
+            params = {"username":username}
+            cursor = session.execute(query,params)
+            if cursor.rowcount > 0:
+                return cursor.fetchone()[0]
+            else:
+                log.warn("No users found for username {0}".format(username))
+                return None
+        except Exception as e:
+            log.exception("Failed to get email for user {0}".format(username))
+        finally:
+            session.close()
+
     def processing_get_task(self, instance):
         """Get an available task for processing."""
         session = self.Session()
@@ -1453,17 +1475,42 @@ class Database(object):
         finally:
             session.close()
 
-    def get_groups_for_tlp(self, username):
+    def get_users_for_tlp(self, username):
         try:
             session = self.Session()
             params = {"user": username}
-            query = """SELECT outer_a.username FROM auth_user outer_a, auth_user_groups outer_g WHERE outer_g.user_id = outer_a.id AND outer_g.group_id IN (SELECT g.group_id FROM auth_user a, auth_user_groups g WHERE g.user_id = a.id AND a.username = :user)"""
+            query = """SELECT DISTINCT outer_a.username FROM auth_user outer_a, auth_user_groups outer_g WHERE outer_g.user_id = outer_a.id AND outer_g.group_id IN (SELECT g.group_id FROM auth_user a INNER JOIN auth_user_groups g ON g.user_id = a.id WHERE a.username = :user)"""
             result = list(session.execute(query, params).fetchall())
-            for item in result:
-                print item[0]
-            print [item[0] for item in result]
+
             return [item[0] for item in result]
         except Exception as e:
-            log.debug("Error: %s", e)
-            print e
+            log.error("Error: %s", e)
             traceback.print_exc()
+        finally:
+            session.close()
+
+    def get_ids_for_tlp(self, username, start_time=datetime.min, end_time=datetime.max):
+        try:
+            session = self.Session()
+            params = {"user": username, "start_time": start_time, "end_time": end_time}
+            query = """SELECT DISTINCT t.id 
+FROM auth_user outer_a 
+INNER JOIN auth_user_groups outer_g 
+  ON outer_g.user_id = outer_a.id 
+INNER JOIN tasks t 
+  ON outer_a.username = t.owner 
+WHERE t.started_on > :start_time 
+AND t.completed_on <= :end_time 
+AND ((outer_g.group_id IN 
+    (SELECT g.group_id 
+    FROM auth_user a 
+    INNER JOIN auth_user_groups g 
+      ON g.user_id = a.id 
+    WHERE a.username = :user) AND t.tlp='amber') OR t.tlp='green' OR (t.tlp='red' and t.owner = 'admin'))""";
+            result = list(session.execute(query, params).fetchall())
+            return [str(item[0]) for item in result]
+        except Exception as e:
+            log.error("Error: %s", e)
+            traceback.print_exc()
+        finally:
+            session.close()

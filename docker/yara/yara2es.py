@@ -8,6 +8,7 @@ import yara
 import traceback
 from elasticsearch import Elasticsearch
 from pymongo import MongoClient
+from decimal import *
 my_es = ""
 my_mongo = ""
 now = datetime.datetime.today()
@@ -74,18 +75,62 @@ def ruleCallback(data, filename, anal_id):
         index_yara(data)
 
 
-def scan_files(rules_path, folder_paths_file):
+def get_paths(numbers):
+
+    for number in numbers:
+        print "enumerating analysis {0}".format(number)
+        analysis_folder = os.path.join('/analyses/analyses', number)
+        yara_malware_instance_folder = os.path.join('/analyses/analyses', number)
+        # yara_malware_instance_folder = os.path.join(yara_malware_folder, number)
+        # os.makedirs(yara_malware_instance_folder)
+        analysis_memory_path = os.path.join(analysis_folder, "memory")
+        # print analysis_memory_path
+        if os.path.exists(analysis_memory_path):
+            # print analysis_memory_path
+            # volumes[analysis_memory_path] = {'bind': os.path.join(yara_malware_instance_folder, "memory"), 'mode': 'ro'}
+            yield os.path.join(yara_malware_instance_folder, "memory")
+            # os.symlink(analysis_memory_path, os.path.join(yara_malware_instance_folder, "memory"))
+
+        analysis_buffer_path = os.path.join(analysis_folder, "buffer")
+        if os.path.exists(analysis_buffer_path):
+            # print analysis_buffer_path
+            yield os.path.join(yara_malware_instance_folder, "buffer")
+            # volumes[analysis_buffer_path] = {'bind': os.path.join(yara_malware_instance_folder, "buffer"), 'mode': 'ro'}
+            # os.symlink(analysis_buffer_path, os.path.join(yara_malware_instance_folder, "buffer"))
+
+        analysis_files_path = os.path.join(analysis_folder, "files")
+        if os.path.exists(analysis_files_path):
+            # print analysis_files_path
+            # volumes[analysis_files_path] = {'bind': os.path.join(yara_malware_instance_folder, "files"), 'mode': 'ro'}
+            yield os.path.join(yara_malware_instance_folder, "files")
+            # os.symlink(analysis_files_path, os.path.join(yara_malware_instance_folder, "files"))
+
+        binary_file_path = os.path.join(analysis_folder, "binary")
+        if os.path.exists(binary_file_path):
+            # print binary_file_path
+            # volumes[analysis_files_path] = {'bind': os.path.join(yara_malware_instance_folder, "files"), 'mode': 'ro'}
+            yield os.path.join(yara_malware_instance_folder, "binary")
+
+
+def scan_files(rules_path, folder_paths_file, sliceid):
     rules = yara.compile(filepath=rules_path)
+    numbers = []
     paths = []
     with open(folder_paths_file, 'r') as folder_paths:
         for aline in folder_paths.read().splitlines():
-            paths.append(os.path.abspath(aline))
+            numbers.append(aline)
+
+    paths = list(get_paths(numbers))
+    num_paths_to_process = len(paths)
+    paths_finished = []
+    progress_pct = 0
     # print paths
     for path in paths:
         anal_id = path.split('/')[-2]
         if path.endswith('/binary'):
             try:
                 fname = os.readlink(path)
+                print "scanning {0}".format(fname)
                 rules.match(fname, callback=lambda rule_data: ruleCallback(rule_data, fname, anal_id))
             except Exception as e:
                 print traceback.print_exc()
@@ -95,18 +140,23 @@ def scan_files(rules_path, folder_paths_file):
                     filename = os.path.join(root, analysis_file)
                     #print filename
                     try:
+                        print "scanning {0}".format(filename)
                         rules.match(filename, callback=lambda rule_data: ruleCallback(rule_data, filename, anal_id))
                     except Exception as e:
                         print traceback.print_exc()
-            # analysis_files.append(filename)
+        paths_finished.append(path)
+        num_paths_finished = len(paths_finished)
+        progress_pct = Decimal(num_paths_finished) / Decimal(num_paths_to_process) * 100
+        progress_info = "Paths to process: {0} Paths finished: {1} Completion Percentage: {2:.2f}%".format(
+                    num_paths_to_process, num_paths_finished, progress_pct)
+        print progress_info
+        try:
+            with open("/yara/progress_"+sliceid, 'w+') as progress_file:
+                progress_file.write(progress_info)
+        except Exception as prog_e:
+            print "Couldn't write to progress file"
+            traceback.print_exc()
 
-    # p = multiprocessing.Pool(12)
-    # global g_rules_path
-    # g_rules_path = rules_path
-    # print analysis_files
-    # p.map(match_rule, [x for x in analysis_files if isinstance(x, basestring)])
-    # p.close()
-    # p.join()
 
 
 #
@@ -126,6 +176,7 @@ def scan_files(rules_path, folder_paths_file):
 #
 
 def main():
+    # decimals only to two places
     parser = argparse.ArgumentParser(usage="Scan Files in a Directory with Yara Rules")
     parser.add_argument('-y', '--yara_dir',
                         action='store',
@@ -157,6 +208,10 @@ def main():
                         action='store',
                         default="",
                         help='ES host')
+    parser.add_argument('-i', '--sliceid',
+                        action='store',
+                        default="0",
+                        help='Slice Id for reporting progress')
     args = parser.parse_args()
     global owner
     owner = args.owner
@@ -171,7 +226,7 @@ def main():
     print args
     # print os.listdir(args.scan_folders)
     print os.listdir('/')
-    scan_files(os.path.abspath(args.yara_dir), os.path.abspath(args.scan_folders))
+    scan_files(os.path.abspath(args.yara_dir), os.path.abspath(args.scan_folders), args.sliceid)
 
 
 if __name__ == "__main__":

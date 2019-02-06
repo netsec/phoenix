@@ -5,7 +5,7 @@ import django
 import subprocess
 import string
 import ssl
-from pymisp import PyMISP
+
 from random import *
 ##TODO Degrease
 sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), ".."))
@@ -13,8 +13,7 @@ sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), ".."
 sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", "web", "web"))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 from django.conf import settings
-from django.contrib.auth.models import User
-from django.contrib.auth.models import Group
+
 from lib.cuckoo.common.config import Config
 config = Config("reporting")
 options = config.get("z_misp")
@@ -33,14 +32,18 @@ def generate_password():
 
 def createDjango(email, pw, groups):
     ## Needed for groups to work
+    # Import here so that we don't waste time with the script at startup
+    from django.contrib.auth.models import User
+    from django.contrib.auth.models import Group
     django.setup()
     ## Create the user
     user = User.objects.create_user(email, email, pw)
     user.save()
     ## Add the user to groups
-    for group in groups:
-        my_group = Group.objects.get(name=group)
-        my_group.user_set.add(user)
+    if groups:
+        for group in groups:
+            my_group = Group.objects.get(name=group)
+            my_group.user_set.add(user)
 
 def createMoloch(email, pw):
     ## Add the user to Moloch
@@ -56,6 +59,8 @@ def createApache2(email, pw, htpasswd_file):
 
 
 def create_misp(email, pw, groups):
+    # Import here to not waste time in script
+    from pymisp import PyMISP
     misp = PyMISP(mymisp, auth_key, False)
     org = misp.add_organisation(email)
     check_misp_errors(org,"Error adding organisation")
@@ -66,10 +71,11 @@ def create_misp(email, pw, groups):
 
     sharing_groups_response = misp.get_sharing_groups()
     check_misp_errors(sharing_groups_response, "Error getting sharing groups")
-    sharing_groups = {group["SharingGroup"]["name"]: group["SharingGroup"]["id"] for group in sharing_groups_response}
-    for group in groups:
-        if group in sharing_groups:
-            misp.sharing_group_org_add(sharing_groups[group], org_id)
+    if groups:
+        sharing_groups = {group["SharingGroup"]["name"]: group["SharingGroup"]["id"] for group in sharing_groups_response}
+        for group in groups:
+            if group in sharing_groups:
+                misp.sharing_group_org_add(sharing_groups[group], org_id)
 
 
 def check_misp_errors(response, error_str):
@@ -90,20 +96,20 @@ The MISP instance
 Please report all bugs to me with the subject line of 'Phoenix Bugs'.''')
 
 
-def main(argv):
+def main():
     parser = argparse.ArgumentParser(description='Phoenix user add script')
-    parser.add_argument('-e', '--email', help='Email to add')
-    parser.add_argument('-g', '--groups', help='Groups to add the email to - comma separated')
+    parser.add_argument("email", help='Email to add')
+    parser.add_argument('-g', '--group', dest='groups', action='append', default=[], help='One group to add the email to (can be used multiple times')
+    parser.add_argument('-p', '--password', help='Optional, set the password manually')
     settings = parser.parse_args()
     email = settings.email
     groups = settings.groups
+    pw = settings.password
 
-    if all(v is None for v in [email, groups]):
-        print 'not enough args'
-        sys.exit()
+    if not pw:
+        pw = generate_password()
+    # groups = groups.split(',')
 
-    groups = groups.split(',')
-    pw = generate_password()
     createDjango(email, pw, groups)
     createMoloch(email, pw)
     createApache2(email, pw, htpasswd_file)
@@ -114,4 +120,4 @@ def main(argv):
 ##TODO Add the user as an ORG in MISP
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()

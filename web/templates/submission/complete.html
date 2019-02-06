@@ -2,6 +2,7 @@
 {% load staticfiles %}
 {% block content %}
 <div class="alert alert-success"><h4>Submission complete!</h4>
+<b>You have {{ creditsleft }} submissions left for today. </b><br/>
 The following tasks were added successfully:
 {% for task in tasks %}
     <a href="{% url "submission.views.status" task %}">{{task}}</a>

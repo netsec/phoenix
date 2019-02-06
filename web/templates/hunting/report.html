@@ -1,15 +1,218 @@
 {% extends "base.html" %}
+{% load js %}
+
 {% load staticfiles %}
 {% block content %}
-{% for result in results %}
+    {% django_js jquery=false %}
 
-{% if result.es_type == "yara" %}
-    {% include "hunting/output_templates/yara.html" %}
-{% endif %}
+    <script type="text/javascript">
+        String.prototype.trunc = String.prototype.trunc ||
+            function (n) {
+                return (this.length > n) ? this.substr(0, n - 1) + '&hellip;' : this;
+            };
+        // First, checks if it isn't implemented yet.
+        if (!String.prototype.format) {
+            String.prototype.format = function () {
+                var args = arguments;
+                return this.replace(/{(\d+)}/g, function (match, number) {
+                    return typeof args[number] != 'undefined'
+                        ? args[number]
+                        : match
+                        ;
+                });
+            };
+        }
 
-{% if result.es_type == "suricata" %}
-    {% include "hunting/output_templates/suricata.html" %}
-{% endif %}
+        const suri_table_obj =
+            {
+                "dom": '<"toolbar">Rfipt<t>l',
+                "order": [[0, "desc"]],
 
-{% endfor %}
+                {#'processing': true,#}
+                'responsive': true,
+
+                {#"order": [[0, "desc"]],#}
+                "columns": [{
+                    "data": "analysis_id",
+                    "render": function (data) {
+                        if (data) {
+                            return '<a href="{0}">{1}</a>'.format(Django.url("analysis_report", data), data)
+                        }
+                    }
+                },
+                    {
+                        "data": "alert.signature_id"
+                    },
+                    {
+                        "data": "alert.signature"
+                    },
+                    {
+                        "data": "uri",
+                        "defaultContent": "",
+                        "render": function (data, type, row) {
+                            if (data) {
+                                return '<a href="{0}" target="_blank">{1}</a>'.format(row["link_url"], data)
+                            }
+                        }
+                    },
+                    {
+                        "data": "method",
+                        "defaultContent": ""
+                    },
+                    {
+                        "data": "analysis_id",
+                        "render": function (data) {
+                            if (data) {
+                                return '<a href="{0}">PCAP</a>'.format(Django.url("hunting_pcap", data))
+                            }
+                        }
+
+                    }
+                ]
+            };
+
+
+        const yara_table_obj = {
+            "dom": '<"toolbar">Rfipt<t>l',
+            "order": [[0, "desc"]],
+
+            {#'processing': true,#}
+            'responsive': true,
+
+            {#"order": [[0, "desc"]],#}
+            "columns": [{
+                "data": "analysis_id",
+                "render": function (data) {
+                    if (data) {
+                        return '<a href="{0}">{1}</a>'.format(Django.url("analysis_report", data), data)
+                    }
+                }
+            },
+
+                {
+                    "data": "alert.signature",
+                    "render": function (data, type, row) {
+                        if (data) {
+                            return '<a href="{0}">{1}</a>'.format(Django.url("hunting_yara_file", row.uuid), data)
+                        }
+                    }
+                },
+
+                {
+                    "data": "raw_filename",
+                    "render": function (data, type, row) {
+                        if (data) {
+                            return '<a href="{0}">{1}</a>'.format(Django.url("hunting_yara_download", row.pk, row.es_index), data)
+                        }
+                    }
+                },
+                {% comment %}   {
+                       "data": "null",
+                       "targets": -2,
+                       "render": function (data, type, row) {
+                           if (row.file_dropped) {
+                               let html = "<ul>";
+                               for (let file in row.file_dropped) {
+                                   html += "<li>Filename: =" + file.file_path + "</li>";
+                                   html += "<li>SHA256:" + file.file_sha256 + "</li>";
+                                   if (file.command_line) {
+                                       html += "<br /> Command Line <ul> ";
+                                       for (let line in file.command_line) {
+                                           html += "<li> <ul> <li>Command line: " + line.command_line + "</li>";
+                                           html += "<li>Parent PID: " + line.parent + "</li>";
+                                           html += "<li>Parent Command line: " + line.parent_command_line + "</li>";
+                                       }
+                                       html += "</ul> </li>"
+                                   }
+                               }
+                               html += "</ul>";
+                               return html;
+                           }
+                           else {
+                               return "No dropped files";
+                           }
+                       }
+                   },{% endcomment %}
+
+            ]
+        };
+
+
+        $(document).ready(function () {
+
+            var url = window.location.href.replace(/\/$/, '');
+            var hunt_id = url.substr(url.lastIndexOf('/') + 1);
+            var url_hunt = url.substr(0, url.lastIndexOf('/'));
+            var table_data = '';
+            $.ajax({
+                url: url_hunt + "/ajax/hunt_data/" + hunt_id,
+                success: function (data) {
+                    table_data = data.results;
+                    if (!table_data || table_data.length == 0) {
+                        $("#noresults-div").show();
+                        $("#loader-div").hide();
+
+                        return;
+                    }
+                    if (table_data[0].es_type == "suricata") {
+                        var dt_obj = suri_table_obj;
+                        var dt_table = $('#suri_table');
+                    }
+                    if (table_data[0].es_type == "yara") {
+                        var dt_obj = yara_table_obj;
+                        var dt_table = $('#yara_table');
+                    }
+                    dt_obj.data = table_data;
+                    dt_table.DataTable(dt_obj);
+                    dt_table.show();
+                    $("#loader-div").hide();
+
+                }
+            });
+
+        });
+    </script>
+    <div>
+        <div id="loader-div" style="width: 100%; text-align: center">
+            <img class="loading" src="{{ baseUrl }}/static/img/loader_gifs/{{ loading_image }}"/>
+            <br/>
+            <h3>Loading hunting data...</h3>
+        </div>
+        <div id="noresults-div" style="width: 100%; text-align: center; display:none">
+            <h3>No hunting results</h3>
+        </div>
+        <table cellspacing="0" class="table table-striped" id="suri_table" style="width: 100%; display: none;">
+            <thead>
+            <tr>
+                <th>Analysis ID</th>
+                <th>Signature ID</th>
+                <th>Signature</th>
+                <th>URI</th>
+                <th>Method</th>
+                <th>Download</th>
+            </tr>
+            </thead>
+        </table>
+        <table cellspacing="0" class="table table-striped" id="yara_table" style="width: 100%; display: none;">
+            <thead>
+            <tr>
+                <th>Analysis ID</th>
+                <th>Signature</th>
+                <th>File Hit</th>
+            </tr>
+            </thead>
+        </table>
+    </div>
+    {% for result in results %}
+
+        {% if result.es_type == "yara" %}
+            {% include "hunting/output_templates/yara.html" %}
+        {% endif %}
+
+        {% if result.es_type == "suricata" %}
+
+            {#    {% include "hunting/output_templates/suricata.html" %}#}
+        {% endif %}
+
+    {% endfor %}
 {% endblock %}

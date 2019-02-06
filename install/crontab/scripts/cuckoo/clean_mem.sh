@@ -4,4 +4,4 @@ MEMDUMPDIR=$(grep '^memdump_tmp' CUCKOODIR/conf/memory.conf |awk -F '=' '{print 
 if [ -n "$MEMDUMPDIR" ]; then
     find $MEMDUMPDIR/*.dmp -amin +3|while read line; do rm -f $line;done
 fi
-find /tmp/cuckoo-tmp/ -amin +5|while read line; do rm -f $line;done
+#find /tmp/cuckoo-tmp/ -amin +5|while read line; do rm -f $line;done

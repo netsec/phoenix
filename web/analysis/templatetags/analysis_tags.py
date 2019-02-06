@@ -1,4 +1,6 @@
 from django.template.defaultfilters import register
+from django.templatetags import static
+
 
 @register.filter
 def mongo_id(value):
@@ -107,3 +109,15 @@ def process_name(pid, analysis):
     for proc in analysis.get("behavior", {}).get("generic", []):
         if proc["pid"] == pid:
             return proc["process_name"]
+
+@register.simple_tag
+def vt_link(url_fragment, value):
+    return '<a href="https://www.virustotal.com/#/{0}/{1}" target="_blank"><img class="vtimage" src="{2}" /></a><a href="https://www.virustotal.com/intelligence/search/?query={1}" target="_blank"><img class="vtimage" src="{3}" /></a>'.format(url_fragment, value, static.static("images/virustotal.png"), static.static("images/intelligence-small.png"))
+
+@register.simple_tag
+def rl_link(url_fragment, value):
+    querystr = "{0}%3A{1}".format(url_fragment,value)
+    if url_fragment == "uri":
+        querystr="{0}%3A{1}%20OR%20c2%3A{1}".format(url_fragment,value)
+
+    return '<a href="https://a1000.reversinglabs.com/search/?q={0}" target="_blank"><img class="vtimage" src="{1}" /></a>'.format(querystr, static.static("images/reversinglabs.png"))

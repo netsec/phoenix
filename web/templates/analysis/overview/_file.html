@@ -1,6 +1,6 @@
 {% load analysis_tags %}
 <section id="file">
-    <h4><span class="glyphicon glyphicon-file" aria-hidden="true"></span> File <i>{{analysis.target.file.name}}</i>
+    <h4 class="forcewrap"><span class="glyphicon glyphicon-file " aria-hidden="true"></span> File <i>{{analysis.target.file.name}}</i>
     </h4>
     <div class="panel panel-default">
         <table class="table table-striped">
@@ -42,7 +42,7 @@
             </tr>
             <tr>
                 <th class="text-right">SHA1</th>
-                <td class="break-everywhere"><tt>{{analysis.target.file.sha1}}</tt></td>
+                <td class="break-everywhere"><tt>{{analysis.target.file.sha1}}</tt>{% rl_link "sha1" analysis.target.file.sha1 %}{% vt_link "search" analysis.target.file.sha1 %}</td>
             </tr>
             <tr>
                 <th class="text-right">SHA256</th>

@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <title>Cuckoo Sandbox</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=0.5, user-scalable=yes">
     <meta name="description" content="Cuckoo Sandbox">
     <meta name="author" content="Cuckoo Sandbox">
 
@@ -14,10 +14,13 @@
     <link href="{% static "css/lightbox.css" %}" rel="stylesheet">
     <link href="{% static "css/query-builder.default.min.css" %}" rel="stylesheet">
     <link href="{% static "css/jquery.dataTables.css" %}" rel="stylesheet">
+    <link href="{% static "css/responsive.dataTables.min.css" %}" rel="stylesheet">
     <script src="{% static "js/jquery.js" %}"></script>
     <script src="{% static "js/query-builder.standalone.min.js" %}"></script>
 
     <script src="{% static "js/jquery.dataTables.js" %}"></script>
+    <script src="{% static "js/dataTables.responsive.min.js" %}"></script>
+    <script src="{% static "js/ColReorderWithResize.js" %}"></script>
     <script src="{% static "js/moment.min.js" %}"></script>
     <script src="{% static "js/datetime-moment.js" %}"></script>
 </head>
@@ -31,11 +34,13 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
+            <div class="brand" ><img style="margin: 5px 5px -10px 10px; height: 46px;"
+                         src="{% static "graphic/cuckoo_inverse.png" %}"/>
+                <img style="margin: 5px 5px -10px 10px; height: 46px;"
+                         src="{% static "images/SparkIT_grayscale.png" %}"/></div>
         </div>
         <nav class="collapse navbar-collapse bs-navbar-collapse" role="navigation">
-            <ul class="nav navbar-nav">
-                <li><img style="margin: 10px 10px -10px 20px; height: 46px;"
-                         src="{% static "graphic/cuckoo_inverse.png" %}"/></li>
+            <ul class="nav navbar-nav nav-pills">
                 {% if user.is_authenticated %}
                     <li><a href="{% url "dashboard.views.index" %}"><span class="glyphicon glyphicon-dashboard"></span>
                         Dashboard</a></li>
@@ -43,30 +48,37 @@
                     </li>
                     <li><a href="{% url "analysis.views.pending" %}"><span class="glyphicon glyphicon-time"></span>
                         Pending</a></li>
-{% comment %}                    {% if user.username == "jb" or user.username == "greg" %}
+                    {% comment %}                    {% if user.username == "jb" or user.username == "greg" %}
                         <li><a href="{% url "analysis.views.search" %}"><span class="glyphicon glyphicon-search"></span>
                             Search</a></li>
                     {% endif %}{% endcomment %}
                     <li><a href="{% url "advanced_search.views.index" %}"><span
                             class="glyphicon glyphicon-search"></span> Advanced Search</a></li>
+                    <li><a href="https://moloch.{{ request.get_host }}/cyberchef.htm" target="_blank">CyberChef <span
+                            class="glyphicon glyphicon-new-window"></span> </a></li>
+                    <li><a href="https://moloch.{{ request.get_host }}" target="_blank">Moloch <span
+                            class="glyphicon glyphicon-new-window"></span> </a></li>
+                    <li><a href="https://misp.{{ request.get_host }}" target="_blank">MISP <span
+                            class="glyphicon glyphicon-new-window"></span></a></li>
                     <li><a href="{% url "submission.views.index" %}"><span class="glyphicon glyphicon-upload"></span>
                         Submit</a></li>
-{#                    <li><a href="{% url "analysis.views.import_analysis" %}"><span#}
-{#                            class="glyphicon glyphicon-import"></span> Import</a></li>#}
+                    {#                    <li><a href="{% url "analysis.views.import_analysis" %}"><span#}
+                    {#                            class="glyphicon glyphicon-import"></span> Import</a></li>#}
                     <li><a href="{% url "hunting.views.index" %}"><span class="glyphicon glyphicon-import"></span>
                         Hunting</a></li>
+                    <li>
+                        {% if user.is_authenticated %}
+                            <a style="margin-right: 30px; text-align:right" href="/logout">Logout</a>
+                        {% else %}
+                            <a style="margin-right:30px; text-align:right" href="/login">Login</a>
+                        {% endif %}
+                    </li>
                 {% endif %}
             </ul>
 
-            <ul class="nav navbar-nav navbar-right">
-                <li>
-                    {% if user.is_authenticated %}
-                        <a style="margin-right: 30px; text-align:right" href="/logout">Logout</a>
-                    {% else %}
-                        <a style="margin-right:30px; text-align:right" href="/login">Login</a>
-                    {% endif %}
-                </li>
-            </ul>
+           {% comment %} <ul class="nav navbar-nav navbar-right">
+
+            </ul>{% endcomment %}
         </nav>
     </nav>
 </header>

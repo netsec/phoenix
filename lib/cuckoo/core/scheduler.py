@@ -10,6 +10,7 @@ import logging
 import threading
 import Queue
 
+
 from lib.cuckoo.common.config import Config, emit_options
 from lib.cuckoo.common.constants import CUCKOO_ROOT
 from lib.cuckoo.common.exceptions import CuckooMachineError, CuckooGuestError
@@ -24,11 +25,13 @@ from lib.cuckoo.core.plugins import list_plugins, RunAuxiliary, RunProcessing
 from lib.cuckoo.core.plugins import RunSignatures, RunReporting
 from lib.cuckoo.core.resultserver import ResultServer
 from lib.cuckoo.core.rooter import rooter, vpns
+# from lib.phoenix.HighLowSemaphore import HighLowSemaphore
 
 log = logging.getLogger(__name__)
 
 machinery = None
 machine_lock = None
+# analysis_lock = None
 latest_symlink_lock = threading.Lock()
 
 active_analysis_count = 0
@@ -48,6 +51,7 @@ class AnalysisManager(threading.Thread):
 
         self.errors = error_queue
         self.cfg = Config()
+        self.mem_cfg = Config("memory")
         self.storage = ""
         self.binary = ""
         self.storage_binary = ""
@@ -433,6 +437,9 @@ class AnalysisManager(threading.Thread):
             if self.cfg.cuckoo.memory_dump or self.task.memory:
                 try:
                     dump_path = os.path.join(self.storage, "memory.dmp")
+                    memdump_tmp = self.mem_cfg.basic.memdump_tmp
+                    if memdump_tmp:
+                        dump_path = os.path.join(memdump_tmp, str(self.task.id))+".dmp"
                     machinery.dump_memory(self.machine.label, dump_path)
                 except NotImplementedError:
                     log.error("The memory dump functionality is not available "
@@ -562,6 +569,7 @@ class AnalysisManager(threading.Thread):
             log.exception("Failure in AnalysisManager.run")
 
         task_log_stop(self.task.id)
+        # analysis_lock.release()
         active_analysis_count -= 1
 
 class Scheduler(object):
@@ -575,8 +583,13 @@ class Scheduler(object):
     assigned analysis machine.
     """
     def __init__(self, maxcount=None):
+
+        self.water_gate = False
         self.running = True
         self.cfg = Config()
+        self.mem_cfg = Config("memory")
+        self.low_watermark = int(self.cfg.cuckoo.low_watermark)
+        self.high_watermark = int(self.cfg.cuckoo.high_watermark)
         self.db = Database()
         self.maxcount = maxcount
         self.total_analysis_count = 0
@@ -593,6 +606,8 @@ class Scheduler(object):
         else:
             machine_lock = threading.Lock()
 
+        # global analysis_lock
+        # analysis_lock = HighLowSemaphore()
         log.info("Using \"%s\" as machine manager", machinery_name)
 
         # Get registered class name. Only one machine manager is imported,
@@ -685,6 +700,9 @@ class Scheduler(object):
         while self.running:
             time.sleep(1)
 
+
+
+                
             # Wait until the machine lock is not locked. This is only the case
             # when all machines are fully running, rather that about to start
             # or still busy starting. This way we won't have race conditions
@@ -729,11 +747,31 @@ class Scheduler(object):
 
             # Exits if max_analysis_count is defined in the configuration
             # file and has been reached.
-            if self.maxcount and self.total_analysis_count >= self.maxcount:
-                if active_analysis_count <= 0:
-                    log.debug("Reached max analysis count, exiting.")
-                    self.stop()
+            # if self.maxcount and self.total_analysis_count >= self.maxcount:
+            #     if active_analysis_count <= 0:
+            if self.maxcount and active_analysis_count >= self.maxcount:
+                # if active_analysis_count <= 0:
+                #     log.debug("Reached max analysis count, exiting.")
+                #     self.stop()
                 continue
+
+            # wait for the semaphore to give us more analyses
+            completed_count = self.db.count_tasks(status=TASK_COMPLETED)
+            if self.water_gate:  # it happened, okay?
+                if completed_count < self.low_watermark:
+                    self.m_log("Water gate is closed and semaphore below low watermark, opening gate",completed_count)
+                    self.water_gate = False
+                else:
+                    continue
+            else:
+                if completed_count < self.high_watermark:
+                    self.m_log("Water gate is open and semaphore below high watermark",completed_count)
+
+                    if completed_count >= self.high_watermark:
+                        self.m_log("Water gate is open and semaphore reached watermark. Closing gate",completed_count)
+                        self.water_gate = True
+                else:
+                    continue
 
             # Fetch a pending analysis task.
             # TODO This fixes only submissions by --machine, need to add
@@ -757,11 +795,13 @@ class Scheduler(object):
                 task = self.db.fetch(service=False)
 
             if task:
+
+                self.total_analysis_count += 1
+
                 log.debug("Processing task #%s", task.id, extra={
                     "action": "task", "status": "start", "task_id": task.id,
                 })
-                self.total_analysis_count += 1
-
+               
                 # Initialize and start the analysis manager.
                 analysis = AnalysisManager(task.id, errors)
                 analysis.daemon = True
@@ -774,3 +814,6 @@ class Scheduler(object):
                 pass
 
         log.debug("End of analyses.")
+
+    def m_log(self, message, completed_count):
+        log.debug(message + " Water Gate: {0}, Low Watermark: {1}, High Watermark: {2}, Current completed count: {3}, Object ID: {4}".format("Closed" if self.water_gate else "Open", self.low_watermark, self.high_watermark,completed_count , id(self)))

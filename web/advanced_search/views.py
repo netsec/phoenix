@@ -62,7 +62,9 @@ def get_mongo_data(search, user):
     query = {"$and": query_parts}
 
     cursor = client.analysis.find(query,
-                              {"info":"1", "target":"1","behavior.processes": "1", "network.http_ex": "1", "network.https_ex": "1"}).sort("info.ended", -1).limit(200)
+                                  {"info.category": "1", "info.id": "1", "info.ended": "1", "target.file.md5": "1",
+                                   "target.file.name": "1","target.url": "1", "behavior.processes": "1", "network.http_ex": "1",
+                                   "network.https_ex": "1", "_id":"0"}).sort("info.ended", -1).limit(200)
     return cursor
 
 
@@ -78,7 +80,8 @@ def index(request):
     # tasks_urls = db.list_tasks(limit=200, category="url", not_status=TASK_PENDING, tlpuser=request.user.username,
     #                            tlpamberusers=get_tlp_users(request.user))
     #
-    mongo_data = get_mongo_data(request.POST.get("query"), request.user)
+    cursor = get_mongo_data(request.POST.get("query"), request.user)
+    mongo_data = list(cursor)
     analyses_files = []
     with open(os.path.join(CUCKOO_ROOT,"web","advanced_search","search","fields.json"), 'r') as f:
         fields = json.load(f)
@@ -108,7 +111,12 @@ def index(request):
         filename = os.path.basename(mongo_obj["target"]["file"]["name"]) if category == "file" else "N/A"
         new.update({"filename": filename})
         analyses_files.append(new)
-    moloch_url = 'https://{0}{1}/sessions?date=2180&expression=(tags==[{2}])'.format(request.META["SERVER_NAME"], ":"+settings.MOLOCH_PORT if settings.MOLOCH_PORT else "", ",".join(["cuckoo:"+str(analysis) for analysis in analysis_numbers]))
+    moloch_url = 'https://{0}{1}/sessions?date=2180&expression=(tags==[{2}])'.format(request.META["SERVER_NAME"],
+                                                                                     ":" + settings.MOLOCH_PORT if settings.MOLOCH_PORT else "",
+                                                                                     ",".join(
+                                                                                         ["cuckoo:" + str(analysis) for
+                                                                                          analysis in
+                                                                                          analysis_numbers]))
     lastRules = request.POST.get("lastRules")
     log.info(lastRules)
 

@@ -369,11 +369,11 @@ def exception_message():
 
     try:
         import pip
-
-        msg += "Modules: %s\n" % " ".join(sorted(
-            "%s:%s" % (package.key, package.version)
-            for package in pip.get_installed_distributions()
-        ))
+        # TODO: Fix this with whatever Pip supports now
+        # msg += "Modules: %s\n" % " ".join(sorted(
+        #     "%s:%s" % (package.key, package.version)
+        #     for package in pip.get_installed_distributions()
+        # ))
     except ImportError:
         pass
 

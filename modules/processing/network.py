@@ -21,9 +21,11 @@ from lib.cuckoo.common.irc import ircMessage
 from lib.cuckoo.common.objects import File
 from lib.cuckoo.common.utils import convert_to_printable, versiontuple
 from lib.cuckoo.common.exceptions import CuckooProcessingError
+from lib.cuckoo.common.whitelist import is_whitelisted_domain
 
 try:
     import dpkt
+
     HAVE_DPKT = True
 except ImportError:
     HAVE_DPKT = False
@@ -64,6 +66,7 @@ if _v and versiontuple(_v) < versiontuple(LATEST_HTTPREPLAY):
         "version (`pip install --upgrade httpreplay`).",
         _v, LATEST_HTTPREPLAY,
     )
+
 
 class Pcap(object):
     """Reads network data from PCAP file."""
@@ -140,25 +143,26 @@ class Pcap(object):
         return True
 
     def d_is_whitelisted(self, conn, hostname):
-        """Checks if whitelisting conditions are met"""
-        # is whitelistng enabled ?
-        if not self.whitelist_enabled:
-            return False
-        
-        # is DNS recording coming from allowed NS server
-        if not self.known_dns:
-            pass
-        elif (conn.get("src") in self.known_dns or 
-              conn.get("dst") in self.known_dns):
-            pass
-        else:
-            return False
-
-        # is hostname whitelisted
-        if hostname not in self.whitelist:
-            return False
-        
-        return True
+        return is_whitelisted_domain(hostname)
+        # """Checks if whitelisting conditions are met"""
+        # # is whitelistng enabled ?
+        # if not self.whitelist_enabled:
+        #     return False
+        #
+        # # is DNS recording coming from allowed NS server
+        # if not self.known_dns:
+        #     pass
+        # elif (conn.get("src") in self.known_dns or
+        #       conn.get("dst") in self.known_dns):
+        #     pass
+        # else:
+        #     return False
+        #
+        # # is hostname whitelisted
+        # if hostname not in self.whitelist:
+        #     return False
+        #
+        # return True
 
     def _build_known_dns(self):
         """Build known DNS list."""
@@ -292,7 +296,7 @@ class Pcap(object):
         """
         try:
             return isinstance(icmp_data, dpkt.icmp.ICMP) and \
-                len(icmp_data.data) > 0
+                   len(icmp_data.data) > 0
         except:
             return False
 
@@ -418,12 +422,12 @@ class Pcap(object):
                 elif answer.type == dpkt.dns.DNS_SOA:
                     ans["type"] = "SOA"
                     ans["data"] = ",".join([answer.mname,
-                                           answer.rname,
-                                           str(answer.serial),
-                                           str(answer.refresh),
-                                           str(answer.retry),
-                                           str(answer.expire),
-                                           str(answer.minimum)])
+                                            answer.rname,
+                                            str(answer.serial),
+                                            str(answer.refresh),
+                                            str(answer.retry),
+                                            str(answer.expire),
+                                            str(answer.minimum)])
                 elif answer.type == dpkt.dns.DNS_HINFO:
                     ans["type"] = "HINFO"
                     ans["data"] = " ".join(answer.text)
@@ -479,9 +483,11 @@ class Pcap(object):
             r = dpkt.http.Request()
             r.method, r.version, r.uri = None, None, None
             r.unpack(tcpdata)
+            if "host" in r.headers and is_whitelisted_domain(convert_to_printable(r.headers["host"])):
+                log.debug("{0} whitelisted in http(s)_ex".format(r.headers["host"]))
+                return False
         except dpkt.dpkt.UnpackError:
-            if r.method is not None or r.version is not None or \
-                    r.uri is not None:
+            if r.method is not None or r.version is not None or r.uri is not None:
                 return True
             return False
 
@@ -509,7 +515,10 @@ class Pcap(object):
                 entry["host"] = convert_to_printable(http.headers["host"])
             else:
                 entry["host"] = ""
+            if is_whitelisted_domain(entry["host"]):
+                log.debug("{0} whitelisted in http(s)_ex".format(entry["host"]))
 
+                return False
             entry["port"] = dport
 
             # Manually deal with cases when destination port is not the
@@ -624,8 +633,8 @@ class Pcap(object):
             reqs = ircMessage()
             filters_sc = ["266"]
             self.irc_requests = self.irc_requests + \
-                reqc.getClientMessages(tcpdata) + \
-                reqs.getServerMessagesFilter(tcpdata, filters_sc)
+                                reqc.getClientMessages(tcpdata) + \
+                                reqs.getServerMessagesFilter(tcpdata, filters_sc)
         except Exception:
             return False
 
@@ -687,9 +696,11 @@ class Pcap(object):
                         connection["dport"] = tcp.dport
                         self._tcp_dissect(connection, tcp.data)
 
-                        src, sport, dst, dport = (connection["src"], connection["sport"], connection["dst"], connection["dport"])
-                        if not ((dst, dport, src, sport) in self.tcp_connections_seen or (src, sport, dst, dport) in self.tcp_connections_seen):
-                            self.tcp_connections.append((src, sport, dst, dport, offset, ts-first_ts))
+                        src, sport, dst, dport = (
+                        connection["src"], connection["sport"], connection["dst"], connection["dport"])
+                        if not ((dst, dport, src, sport) in self.tcp_connections_seen or (
+                        src, sport, dst, dport) in self.tcp_connections_seen):
+                            self.tcp_connections.append((src, sport, dst, dport, offset, ts - first_ts))
                             self.tcp_connections_seen.add((src, sport, dst, dport))
 
                         self.alive_hosts[dst, dport] = True
@@ -715,9 +726,11 @@ class Pcap(object):
                         connection["dport"] = udp.dport
                         self._udp_dissect(connection, udp.data)
 
-                        src, sport, dst, dport = (connection["src"], connection["sport"], connection["dst"], connection["dport"])
-                        if not ((dst, dport, src, sport) in self.udp_connections_seen or (src, sport, dst, dport) in self.udp_connections_seen):
-                            self.udp_connections.append((src, sport, dst, dport, offset, ts-first_ts))
+                        src, sport, dst, dport = (
+                        connection["src"], connection["sport"], connection["dst"], connection["dport"])
+                        if not ((dst, dport, src, sport) in self.udp_connections_seen or (
+                        src, sport, dst, dport) in self.udp_connections_seen):
+                            self.udp_connections.append((src, sport, dst, dport, offset, ts - first_ts))
                             self.udp_connections_seen.add((src, sport, dst, dport))
 
                 elif ip.p == dpkt.ip.IP_PROTO_ICMP:
@@ -767,6 +780,7 @@ class Pcap(object):
 
         return self.results
 
+
 class Pcap2(object):
     """Interprets the PCAP file through the httpreplay library which parses
     the various protocols, decrypts and decodes them, and then provides us
@@ -811,12 +825,16 @@ class Pcap2(object):
                 filepath = os.path.join(self.network_path, sha1)
                 open(filepath, "wb").write(recv.body or "")
 
+                hostname = sent.headers.get("host", dstip)
+                if is_whitelisted_domain(hostname):
+                    log.debug("{0} whitelisted in http(s)_ex".format(hostname))
+                    continue
                 results["%s_ex" % protocol].append({
                     "src": srcip, "sport": srcport,
                     "dst": dstip, "dport": dstport,
                     "protocol": protocol,
                     "method": sent.method,
-                    "host": sent.headers.get("host", dstip),
+                    "host": hostname,
                     "uri": sent.uri,
                     "request": request.decode("latin-1"),
                     "response": response.decode("latin-1"),

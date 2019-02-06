@@ -176,7 +176,7 @@ To export your VMs in a way that the easy-button knows how to import, su to your
 
 ![Setup_MISP5](./install/screencaps/misp5.png)
 
-##### Click on `Administration` -> `Server Settings & Maintenance`, then click on `MISP Settings`.  The only actual option that needs to be change is `live`, but we recommend going through all of the red and yellow MISP values and setting them appropriately.
+##### Click on `Administration` -> `Server Settings & Maintenance`, then click on `MISP Settings`.  The only actual options that need to be changed are `live` and `MISP.baseurl`, but we recommend going through all of the red and yellow MISP values and setting them appropriately.
 
 ![Setup_MISP6](./install/screencaps/misp6.png)
 
@@ -243,19 +243,26 @@ optional arguments:
                         Groups to add the email to - comma separated
 ```
 ```
-python /opt/phoenix/utils/setup_user.py -e JoeBlow@yourdomain.com -g "SecOps,CyberIntel"
+python /opt/phoenix/utils/setup_user.py -g SecOps -g CyberIntel JoeBlow@yourdomain.com 
 ```
-##### With users and groups setup, you can start submitting files, and enjoying your Phoenix install
+##### Create the folder that is set as `tmppath` in `cuckoo.conf` and chown it to `cuckoo.cuckoo`, if you changed it to something other than /tmp
+
+##### Finally, turn VPNs on in `/opt/phoenix/conf/vpn.conf`
+![VPNConf1](./install/screencaps/vpnconf.PNG)
+##### With users and groups setup, and VPNs turned on, you can start submitting files, and enjoying your Phoenix install
 ##### To programmatically submit files from [Reversing Labs](https://www.reversinglabs.com) or [Virus Total](https://virustotal.com) take a look at `/opt/phoenix/utils/auto_submit.py`
 
 ### Pro Tips:
 * We haven't seen any issues using chrome, so I'd advise using that browser with Cuckoo/Phoenix
+* If you start noticing that no reports are switching from "pending" to "running", then cuckoop (cuckoo.py) is having issues.  check /var/log/cuckoo/cuckoo.log.  The usual culprit is a VPN circuit being down causing cuckoo to fail to start.  You'll see which it is in that log.  Do a full_restart to bounce all the circuits, and if that circuit still refuses to come up, remove it from vpn.conf.
+* If you set a new path via `tmppath` in `cuckoo.conf` make sure to create the folder and `chown` it to `cuckoo.cuckoo`
 * There are some additional configurations you can enable to make cuckoo use other (larger/faster) mounts if you have those on your systems.  Read through the comments in ubuntu_installer.sh
 * To update the code from github, simply run update_cuckoo.sh from the root of your cuckoo folder (in our example /opt/phoenix).  
 *** We recommend you backup before you run this ***
 * Put the Yara rules you'd like tagged into MISP in /opt/phoenix/data/external
 * When using the auto-tagging feature (conf/misp.json) make sure to setup your tags within MISP first, and use the ID which MISP generates there for your auto-tagging
 * Cuckoo has bugs.  We did everything we could to package up great logging with this appliance.  If things crash, please take a look in kibana and the logs there.
+* If you're planning to use a script to send lots of submissions to the API, make sure you crank up your Usage Limits in the Admin section (https://<cuckoo_home_url>/admin) under the user (it's at the bottom)
 * We've seen sometimes where cuckoo.py crashes, so often we'll run it in a screen like so:
 
 ```
@@ -266,7 +273,13 @@ python cuckoo.py -d -m 1000000
 ## If you use this greasy hack, remember to take `cuckood` out of `PROGNAMES` in `/etc/init.d/cuckoo_all`.
 ```
 
-* If you want to greatly improve processing time, especially as it pertains to volatility, look at conf/memory.conf and allocate some space to `memdump_tmp`.  That will ensure that all volatility processing (very heavy IO) is done entirely in memory.
+* If you want to greatly improve processing time, especially as it pertains to volatility, look at conf/memory.conf and allocate some space to `memdump_tmp`.  That will ensure that all volatility processing (very heavy IO) is done entirely in memory, or on a dedicated file system.
+    * Remember to turn 'delete_memdump' = yes in `<cuckoodir>/conf/memory.conf`
+    * Uncomment the `memdump_tmp` line in `<cuckoodir>/conf/memory.conf` and set the value to your memory volume  
+    * Uncomment `del_memdump_from_reported.sh` from cuckoo's `crontab` 
+    * In `<cuckoodir>/utils/del_memdump_from_reported.sh`, set the "STORAGE" variable to your memory volume
+    * 36GB tmpfs RAM disk was used with 6 VMs, high watermark = 10, low watermark = 5
+    
 * Got lots of cores?  Modify /etc/init.d/cuckoop and crank the threads up for processing.  Use netdata to figure out what your bottlenecks are (disk, cpu, etc.) and tune accordingly.
 
 

@@ -14,6 +14,9 @@ import stat
 import subprocess
 import sys
 
+import time
+
+
 def run(*args):
     """Wrapper to Popen."""
     p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -25,13 +28,20 @@ def run(*args):
 
 def nic_available(interface):
     """Check if specified network interface is available."""
-    try:
-        subprocess.check_call([settings.ifconfig, interface],
-                              stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE)
-        return True
-    except subprocess.CalledProcessError:
-        return False
+    bounced = False
+    while True:
+        try:
+            subprocess.check_call([settings.ifconfig, interface],
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE)
+            return True
+        except subprocess.CalledProcessError:
+            if not bounced:
+                bounced = True
+                subprocess.check_call(["/etc/init.d/openvpn", "start"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                time.sleep(15)
+            else:
+                return False
 
 def rt_available(rt_table):
     """Check if specified routing table is defined."""
