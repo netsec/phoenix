@@ -250,7 +250,7 @@ python /opt/phoenix/utils/setup_user.py -g SecOps -g CyberIntel JoeBlow@yourdoma
 ##### Finally, turn VPNs on in `/opt/phoenix/conf/vpn.conf`
 ![VPNConf1](./install/screencaps/vpnconf.PNG)
 ##### With users and groups setup, and VPNs turned on, you can start submitting files, and enjoying your Phoenix install
-##### To programmatically submit files from [Reversing Labs](https://www.reversinglabs.com) or [Virus Total](https://virustotal.com) take a look at `/opt/phoenix/utils/auto_submit.py`
+##### To programmatically submit files from [Reversing Labs](https://www.reversinglabs.com) or [Virus Total](https://virustotal.com) take a look at `/opt/phoenix/utils/submitters/a10002phoenix.py`.  You'll need to put in your A1000 API key at the top along with your owner email (the user you created with setup_user.py for instance), and your yara rulesets on line 136
 
 ### Pro Tips:
 * We haven't seen any issues using chrome, so I'd advise using that browser with Cuckoo/Phoenix
