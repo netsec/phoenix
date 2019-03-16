@@ -230,17 +230,21 @@ To export your VMs in a way that the easy-button knows how to import, su to your
 ##### With the Django groups and the MISP sharing groups now in sync, we can start adding users to groups.
 
 ```
-python /opt/phoenix/utils/setup_user.py -h 2>/dev/null
-usage: setup_user.py [-h] [-e EMAIL] [-g GROUPS]
+python setup_user.py -h
+usage: setup_user.py [-h] [-g GROUPS] [-p PASSWORD] email
 
 Phoenix user add script
 
+positional arguments:
+  email                 Email to add
+
 optional arguments:
   -h, --help            show this help message and exit
-  -e EMAIL, --email EMAIL
-                        Email to add
-  -g GROUPS, --groups GROUPS
-                        Groups to add the email to - comma separated
+  -g GROUPS, --group GROUPS
+                        One group to add the email to (can be used multiple
+                        times
+  -p PASSWORD, --password PASSWORD
+                        Optional, set the password manually
 ```
 ```
 python /opt/phoenix/utils/setup_user.py -g SecOps -g CyberIntel JoeBlow@yourdomain.com 
@@ -278,7 +282,7 @@ python cuckoo.py -d -m 1000000
     * Uncomment the `memdump_tmp` line in `<cuckoodir>/conf/memory.conf` and set the value to your memory volume  
     * Uncomment `del_memdump_from_reported.sh` from cuckoo's `crontab` 
     * In `<cuckoodir>/utils/del_memdump_from_reported.sh`, set the "STORAGE" variable to your memory volume
-    * 36GB tmpfs RAM disk was used with 6 VMs, high watermark = 10, low watermark = 5
+    * 36GB tmpfs RAM disk was used with 6 VMs, `high_watermark` = 10, `low_watermark` = 5 (in `cuckoo.conf`)
     
 * Got lots of cores?  Modify /etc/init.d/cuckoop and crank the threads up for processing.  Use netdata to figure out what your bottlenecks are (disk, cpu, etc.) and tune accordingly.
 
