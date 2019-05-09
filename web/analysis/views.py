@@ -123,7 +123,7 @@ def yara_data(request):
     if analyses_yhunts:
         analyses_yhunts.sort(reverse=True)
         df = pd.DataFrame(analyses_yhunts)
-        yara_return=json.loads(df.groupby(["uuid","rule"]).first().reset_index().to_json(orient='records'))
+        yara_return = json.loads(df.groupby(["uuid", "rule"]).first().reset_index().to_json(orient='records'))
     return JsonResponse({
         "yara_hunts": yara_return
     })
@@ -653,6 +653,7 @@ moloch_mapper = {
     "dst_ip": "ip == %s",
     "dst_port": "port == %s",
     "sid": 'tags == "sid:%s"',
+    "reportid": 'tags == "cuckoo:%s"'
 }
 
 
@@ -679,13 +680,20 @@ def moloch(request, **kwargs):
     else:
         url = "https://"
 
+    query_object = {
+        "expression": " && ".join(query),
+    }
+    if kwargs.get("reportid"):
+        task = db.view_task(kwargs["reportid"])
+        query_object.update({"startTime": convert_to_epoch_time(task.started_on-datetime.timedelta(days=1))})
+        query_object.update({"stopTime": convert_to_epoch_time(task.completed_on+datetime.timedelta(days=1))})
+    else:
+        query_object.update({"date": kwargs["date"] if kwargs.get("date") else "168"})
+
     url += "%s%s/?%s" % (
         settings.MOLOCH_HOST or hostname,
         ":" + settings.MOLOCH_PORT if settings.MOLOCH_PORT else "",
-        urllib.urlencode({
-            "date": kwargs["date"] if kwargs.get("date") else "168",
-            "expression": " && ".join(query),
-        }),
+        urllib.urlencode(query_object),
     )
     return redirect(url)
 
@@ -1126,3 +1134,7 @@ def check_misp_errors(response, error_str):
     if "errors" in response:
         raise Exception("{0}: {1}".format(error_str, response["errors"][-1]))
     return response
+
+
+def convert_to_epoch_time(my_datetime):
+    return int((my_datetime - datetime.datetime(1970,1,1)).total_seconds())

@@ -123,15 +123,28 @@ def forward_disable(src, dst, ipaddr):
     run(settings.iptables, "-D", "FORWARD", "-i", dst, "-o", src,
         "--destination", ipaddr, "-j", "ACCEPT")
 
-def srcroute_enable(rt_table, ipaddr):
+def srcroute_enable(rt_table, ipaddr, interface):
     """Enable routing policy for specified source IP address."""
     run(settings.ip, "rule", "add", "from", ipaddr, "table", rt_table)
+
+    rule = run(settings.ip, "route", "list", "dev", interface)[0].rstrip()
+    argslist = [settings.ip, "route", "add"]
+    argslist.extend(rule.split())
+    argslist.extend(["dev", interface, "table", rt_table])
+    run(*argslist)
+    devint = run(settings.ip, "route", "show", "dev", interface)[0]
+    devintarr = devint.split('.')[0:3]
+    gw = ".".join(devintarr) + ".1"
+    run(settings.ip, "route", "add", "0.0.0.0/1", "via", gw, "dev", interface, "table", rt_table)
+    run(settings.ip, "route", "add", "128.0.0.0/1", "via", gw, "dev", interface, "table", rt_table)
+
     run(settings.ip, "route", "flush", "cache")
 
 def srcroute_disable(rt_table, ipaddr):
     """Disable routing policy for specified source IP address."""
     run(settings.ip, "rule", "del", "from", ipaddr, "table", rt_table)
     run(settings.ip, "route", "flush", "cache")
+
 
 handlers = {
     "nic_available": nic_available,

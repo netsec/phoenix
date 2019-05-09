@@ -21,3 +21,6 @@ python manage.py migrate auth
 
 python manage.py makemigrations analysis
 python manage.py migrate
+
+cd $CUCKOO_HOME/utils/db_migration
+alembic upgrade head

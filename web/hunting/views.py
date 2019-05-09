@@ -15,6 +15,7 @@ from datetime import datetime
 from time import time
 
 import docker
+from lib.cuckoo.core.database import Database
 from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import login_required
@@ -203,6 +204,8 @@ def kick_off_suricata(analyses_numbers, client, hunting_uuid, strUuid, suriRuleF
 
 def kick_off_yara(analyses_numbers, client, hunting_uuid, strUuid, yaraRuleFile, tlp, username):
     number_set = set(analyses_numbers)
+    db = Database()
+    file_tuples = db.get_paths_for_tasks(list(number_set))
     yara_malware_folder, yara_root_folder, yara_rule_file_path, yara_rules_folder, yara_target_files = get_yara_paths(
         hunting_uuid)
     os.makedirs(yara_rules_folder)
@@ -218,12 +221,12 @@ def kick_off_yara(analyses_numbers, client, hunting_uuid, strUuid, yaraRuleFile,
     # targets = []
 
     # create symlinks for all TLP approved files
-    slices = chunker(list(number_set), settings.MAX_YARA_WORKERS)
+    slices = chunker(list(file_tuples), settings.MAX_YARA_WORKERS)
     for index,slice in enumerate(slices):
         # os.symlink(analysis_memory_path, os.path.join(yara_malware_instance_folder, "binary"))
         yara_slice_targets_path = os.path.join(yara_root_folder, "targets")+'_'+str(index)
         with open(yara_slice_targets_path, 'w+') as target_file:
-            target_file.writelines([line + "\n" for line in slice])
+            target_file.writelines([str(line.task_id)+","+line.file_path + "\n" for line in slice])
 
         print volumes
         client.containers.run(settings.YARA_DOCKER_IMAGE,

@@ -7,6 +7,10 @@
             $.fn.dataTable.moment('MMM. D, YYYY, H:mm a');
             var sortObj = {
                 "order": [[0, "desc"]],
+                "dom":"BRfipt",
+                "buttons": [
+                    'csv', 'excel'
+                ],
                 responsive: true
             };
             $('#file_table').DataTable(sortObj);
@@ -36,6 +40,7 @@
                 if (key == 13)  // the enter key code
                 {
                     $('#queryBuilder').queryBuilder('validate');
+                    $('#btnSubmit').focus();
                     $('#btnSubmit').click();
                     return false;
                 }
@@ -86,7 +91,7 @@
 
                                     <td>
                                         <ul>{% for process in analysis.processes %}
-                                            <li class="mono">{{ process.command_line|truncatechars:250 }}</li>
+                                            <li class="mono">{{ process|truncatechars:250 }}</li>
                                         {% endfor %}</ul>
 
                                     </td>
@@ -127,7 +132,7 @@
                         </table>
                     </div>
                 {% else %}
-                    <div class="panel-body">No files analyzed yet.</div>
+                    <div class="panel-body">No query specified or no files analyzed yet.</div>
                 {% endif %}
             </div>
         </div>

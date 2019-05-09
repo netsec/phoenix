@@ -23,6 +23,7 @@ urlpatterns = [
         r"/(?P<src_ip>[a-zA-Z0-9\.]+)?/(?P<src_port>\d+|None)?"
         r"/(?P<dst_ip>[a-zA-Z0-9\.]+)?/(?P<dst_port>\d+|None)?"
         r"/(?P<sid>\d+)?"
+        r"/(?P<reportid>\d+)?"
         r"/(?P<date>\d+)?",
         views.moloch, name="moloch"),
     url(r"^(?P<task_id>\d+)/export/$", views.export_analysis),

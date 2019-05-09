@@ -108,6 +108,7 @@ export MOLOCH_ELASTICSEARCH="http://$DOCKER_ELASTIC_IP:9200"
 export MOLOCH_INET="yes"
 export MOLOCH_LOCALELASTICSEARCH="no"
 
+
 DJANGO_USER="admin"
 DJANGO_PASSWORD="admin"
 
@@ -126,6 +127,9 @@ VMSTORAGE="/ssd/vbox"
 # If you have a big data slice, put your storage mount in there
 PHOENIXSTORAGE="/data/phoenix_storage"
 
+MLOCATE_DIRECTORIES_TO_IGNORE="\/data \/home\/cuckoo"
+#make installer not ask us any questions.  If you're troubleshooting bad installs remove this and see if you get asked something important
+export DEBIAN_FRONTEND=noninteractive
 
 ### EDIT PAST THIS AT YOUR PERIL
 ## Who the !@#$ is Joe Blow?!
@@ -223,7 +227,7 @@ apt-get upgrade -y
 ## Check your version dependencies... once or twice...
 echo "Installing dependencies"
 
-apt-get install -y git fail2ban openvpn apache2 wget curl uuid-dev libmagic-dev pkg-config g++ flex bison zlib1g-dev libffi-dev gettext libgeoip-dev make libjson-perl libbz2-dev libwww-perl libpng-dev xz-utils libffi-dev iptables-persistent build-essential libssl-dev python-dev libxml2-dev libxslt-dev libtiff5-dev libjpeg8-dev zlib1g-dev libfreetype6-dev liblcms2-dev libwebp-dev tcl8.6-dev tk8.6-dev python-tk libmysqlclient-dev libpcre3-dbg libpcre3-dev autoconf automake libtool libpcap-dev libnet1-dev libyaml-dev zlib1g-dev libcap-ng-dev libmagic-dev libjansson-dev libjansson4 python-pip suricata yara htop nmon apparmor-utils tcpdump volatility mysql-client python python-yaml python-mysqldb python-psycopg2 lm-sensors netcat zlib1g-dev uuid-dev libmnl-dev gcc make autoconf autoconf-archive autogen automake pkg-config sysfsutils unzip rsyslog rsyslog-mmnormalize liblognorm-dev rsyslog-elasticsearch sqlite3 mongodb-clients curl python python-pip apt-transport-https libseccomp2 aufs-tools cgroupfs-mount cgroup-lite pigz ethtool uuid-runtime tesseract-ocr lsof libfuzzy-dev
+apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" install -y git fail2ban openvpn apache2 wget curl uuid-dev libmagic-dev pkg-config g++ flex bison zlib1g-dev libffi-dev gettext libgeoip-dev make libjson-perl libbz2-dev libwww-perl libpng-dev xz-utils libffi-dev iptables-persistent build-essential libssl-dev python-dev libxml2-dev libxslt-dev libtiff5-dev libjpeg8-dev zlib1g-dev libfreetype6-dev liblcms2-dev libwebp-dev tcl8.6-dev tk8.6-dev python-tk libmysqlclient-dev libpcre3-dbg libpcre3-dev autoconf automake libtool libpcap-dev libnet1-dev libyaml-dev zlib1g-dev libcap-ng-dev libmagic-dev libjansson-dev libjansson4 python-pip suricata yara htop nmon apparmor-utils tcpdump volatility mysql-client python python-yaml python-mysqldb python-psycopg2 lm-sensors netcat zlib1g-dev uuid-dev libmnl-dev gcc make autoconf autoconf-archive autogen automake pkg-config sysfsutils unzip rsyslog rsyslog-mmnormalize liblognorm-dev rsyslog-elasticsearch sqlite3 mongodb-clients curl python python-pip apt-transport-https libseccomp2 aufs-tools cgroupfs-mount cgroup-lite pigz ethtool uuid-runtime tesseract-ocr lsof libfuzzy-dev
 
 echo "Grabbing python requirements"
 pip install --upgrade pip
@@ -903,6 +907,13 @@ hosts_file() {
     OUTSIDE_INT=$(route | grep '^default'|grep 0.0.0.0|awk '{print $NF}')
 }
 
+update_db_check(){
+UPDATEDBCHECK=$(grep cuckoo /etc/updatedb.conf)
+echo $UPDATEDBCHECK
+if [ -z "$UPDATEDBCHECK" ]; then
+        sed -i "s/\(PRUNEPATHS.*\).$/\1 $MLOCATE_DIRECTORIES_TO_IGNORE \"/g" /etc/updatedb.conf
+fi
+}
 ## Sometimes you don't know how much work goes into a system until you actually document how it works...
 ## This is essentially how the install script breaks everything down:
 
@@ -934,6 +945,7 @@ setup_netdata
 start_es_monitoring
 setup_storage
 hosts_file
+update_db_check
 
 echo "########################## FINISHED INSTALLING #########################"
 echo "########################################################################"

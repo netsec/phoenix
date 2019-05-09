@@ -118,38 +118,42 @@ def scan_files(rules_path, folder_paths_file, sliceid):
     paths = []
     with open(folder_paths_file, 'r') as folder_paths:
         for aline in folder_paths.read().splitlines():
-            numbers.append(aline)
+            paths.append(aline)
 
-    paths = list(get_paths(numbers))
+    # paths = list(get_paths(numbers))
     num_paths_to_process = len(paths)
     paths_finished = []
     progress_pct = 0
     # print paths
-    for path in paths:
-        anal_id = path.split('/')[-2]
+    for pathtuple in paths:
+        anal_id, path = pathtuple.split(',')
+        path = os.path.join('/analyses/analyses', anal_id, path)
+        print "processing {0}, path {1}".format(anal_id,path)
+        # anal_id = path.split('/')[-2]
         if path.endswith('/binary'):
             try:
                 fname = os.readlink(path)
                 print "scanning {0}".format(fname)
                 rules.match(fname, callback=lambda rule_data: ruleCallback(rule_data, fname, anal_id))
             except Exception as e:
-                print traceback.print_exc()
+                print "Error doing yara matching: "+e.message
+                traceback.print_exc()
         else:
-            for root, directories, files in os.walk(path, followlinks=True):
-                for analysis_file in files:
-                    filename = os.path.join(root, analysis_file)
-                    #print filename
+            # for root, directories, files in os.walk(path, followlinks=True):
+            #     for analysis_file in files:
+            #         filename = os.path.join(root, analysis_file)
                     try:
-                        print "scanning {0}".format(filename)
-                        rules.match(filename, callback=lambda rule_data: ruleCallback(rule_data, filename, anal_id))
+                        print "scanning {0}".format(path)
+                        rules.match(path, callback=lambda rule_data: ruleCallback(rule_data, path, anal_id))
                     except Exception as e:
-                        print traceback.print_exc()
+                        print "Error doing yara matching: "+e.message
+                        traceback.print_exc()
         paths_finished.append(path)
         num_paths_finished = len(paths_finished)
         progress_pct = Decimal(num_paths_finished) / Decimal(num_paths_to_process) * 100
         progress_info = "Paths to process: {0} Paths finished: {1} Completion Percentage: {2:.2f}%".format(
                     num_paths_to_process, num_paths_finished, progress_pct)
-        print progress_info
+        print "Progress:"+ progress_info
         try:
             with open("/yara/progress_"+sliceid, 'w+') as progress_file:
                 progress_file.write(progress_info)
