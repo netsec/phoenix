@@ -26,6 +26,7 @@ sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), ".."
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 from django.conf import settings
 import django
+from django.db import close_old_connections
 import cProfile
 from web.tlp_methods import get_analyses_numbers_matching_tlp2
 from lib.cuckoo.common.constants import CUCKOO_VERSION, CUCKOO_ROOT
@@ -80,6 +81,7 @@ def custom_headers(response):
 @app.route("/v1/tasks/create/file", methods=["POST"])
 def tasks_create_file():
     try:
+        close_old_connections()
         if not request.form.get("owner"):
             return json_error(400, "User not specified")
         if not request.form.get("tlp") or request.form.get("tlp") not in ["green", "amber", "red"]:
@@ -137,6 +139,8 @@ def tasks_create_file():
 @app.route("/tasks/create/url", methods=["POST"])
 @app.route("/v1/tasks/create/url", methods=["POST"])
 def tasks_create_url():
+    close_old_connections()
+
     if not request.form.get("owner"):
         return json_error(400, "User not specified")
     if not request.form.get("tlp") or request.form.get("tlp") not in ["green", "amber", "red"]:

@@ -35,7 +35,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-SCHEMA_VERSION = "cd31654d187"
+SCHEMA_VERSION = "25cb9090c7f9"
 TASK_PENDING = "pending"
 TASK_RUNNING = "running"
 TASK_COMPLETED = "completed"
@@ -236,6 +236,35 @@ class Sample(Base):
         if ssdeep:
             self.ssdeep = ssdeep
 
+class Filepath(Base):
+
+    __tablename__ = "filepaths"
+
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False, primary_key=True)
+    file_path = Column(String(255), nullable=False, primary_key=True)
+
+    def to_dict(self):
+        """Converts object to dict.
+        @return: dict
+        """
+        d = {}
+        for column in self.__table__.columns:
+            d[column.name] = getattr(self, column.name)
+        return d
+
+    def to_json(self):
+        """Converts object to JSON.
+        @return: JSON data
+        """
+        return json.dumps(self.to_dict())
+
+    def __init__(self, file_path, task_id):
+        self.file_path = file_path
+        self.task_id = task_id
+
+    def __repr__(self):
+        return "<Filepath('{0}','{1}')>".format(self.file_path, self.task_id)
+
 
 class Error(Base):
     """Analysis errors."""
@@ -307,6 +336,7 @@ class Task(Base):
     sample = relationship("Sample", backref="tasks")
     guest = relationship("Guest", uselist=False, backref="tasks", cascade="save-update, delete")
     errors = relationship("Error", backref="tasks", cascade="save-update, delete")
+    filepaths = relationship("Filepath", backref="tasks", cascade="all, delete-orphan")
 
     def duration(self):
         if self.started_on and self.completed_on:
@@ -1509,6 +1539,17 @@ AND ((outer_g.group_id IN
     WHERE a.username = :user) AND t.tlp='amber') OR t.tlp='green' OR (t.tlp='red' and t.owner = 'admin'))""";
             result = list(session.execute(query, params).fetchall())
             return [str(item[0]) for item in result]
+        except Exception as e:
+            log.error("Error: %s", e)
+            traceback.print_exc()
+        finally:
+            session.close()
+
+    def get_paths_for_tasks(self, task_numbers):
+        try:
+            session = self.Session()
+            tuples = session.query(Filepath).filter(Filepath.task_id.in_(task_numbers)).all()
+            return tuples
         except Exception as e:
             log.error("Error: %s", e)
             traceback.print_exc()

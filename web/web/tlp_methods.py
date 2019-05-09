@@ -63,32 +63,36 @@ def create_tlp_query(user, search_filter):
         "size": "10000",
         "sort": {"run_date": {"order": "desc"}},
         "query": {
-            "bool": {
-                "must": [
-                    search_filter,
-                    {"bool": {
-                        "should": [
-                            {"bool": {
-                                "must": [
-                                    {"term": {"tlp": "green"}}
-                                ]
-                            }},
-                            {"bool": {
-                                "must": [
-                                    {"term": {"tlp": "amber"}},
-                                    {"terms": {"username.raw": get_tlp_users(user)}}
-                                ]
-                            }},
-                            {"bool": {
-                                "must": [
-                                    {"term": {"tlp": "red"}},
-                                    {"term": {"username.raw": user.username}}
-                                ]
-                            }}
-                        ]
-                    }
-                    }
-                ]
+            "bool": get_es_tlp_query(search_filter, user.username, get_tlp_users(user))}
+    }
 
-            }}
+
+def get_es_tlp_query(search_filter, username, tlp_users, username_field="username.raw"):
+    return {
+        "must": [
+            search_filter,
+            {"bool": {
+                "should": [
+                    {"bool": {
+                        "must": [
+                            {"term": {"tlp": "green"}}
+                        ]
+                    }},
+                    {"bool": {
+                        "must": [
+                            {"term": {"tlp": "amber"}},
+                            {"terms": {username_field: tlp_users}}
+                        ]
+                    }},
+                    {"bool": {
+                        "must": [
+                            {"term": {"tlp": "red"}},
+                            {"term": {username_field: username}}
+                        ]
+                    }}
+                ]
+            }
+            }
+        ]
+
     }

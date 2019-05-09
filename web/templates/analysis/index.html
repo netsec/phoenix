@@ -334,7 +334,7 @@
 
                     {
                         "data": "filename",
-                        "responsivePriority": 7
+                        "responsivePriority": 6
                     },
                     {
                         "data": "md5",
@@ -366,7 +366,7 @@
                             return html;
 
                         },
-                        "responsivePriority": 3
+                        "responsivePriority": 7
                     }
                     ,
                     {
@@ -385,7 +385,7 @@
 
                         ,
                         "responsivePriority":
-                            4
+                            3
                     }
                     ,
                     {
@@ -445,6 +445,7 @@
                                         dst_ip: http_obj.dst,
                                         dst_port: http_obj.dport,
                                         sid: "",
+                                        reportid:"",
                                         date: "168"
                                     }).replace(/\?/g, '');
                                     var template = "<span class=\"mono\"><a target=\"_blank\" href=\"{0}\">{1}</a></span> <br/> <span class=\"mono\">${3}</span><br/>".format(urlmask, http_obj.full_url, http_obj.mycat, http_obj.request)
@@ -466,14 +467,14 @@
 
                             function (data) {
                                 if (data.link)
-                                    return "<a href=\"{0}\" title='{1}'><img width=\"24\" src=\"{2}\"></a>".format(data.link, data.matches, "{% static 'images/green_check.png'%}")
+                                    return "<a href=\"{0}\" title='{1}'><img width=\"24\" src=\"{2}\"></a>".format(data.link, $('<span>').text(data.matches).html(), "{% static 'images/green_check.png'%}");
                                 else return "<div style=\"display:none\">nosig</div>"
 
                             }
 
                         ,
                         "responsivePriority":
-                            5
+                            4
                     }
                     ,
                     {
@@ -486,13 +487,13 @@
 
                             function (data) {
                                 if (data.link)
-                                    return "<a href=\"{0}\" title=\"{1}\"><img width=\"24\" src=\"{2}\"></a>".format(data.link, data.matches, "{% static 'images/green_check.png'%}")
+                                    return "<a href=\"{0}\" title=\"{1}\"><img width=\"24\" src=\"{2}\"></a>".format(data.link, $('<span>').text(data.matches).html(), "{% static 'images/green_check.png'%}")
                                 else return "<div style=\"display:none\">nosig</div>"
                             }
 
                         ,
                         "responsivePriority":
-                            6
+                            5
                     }
 
 

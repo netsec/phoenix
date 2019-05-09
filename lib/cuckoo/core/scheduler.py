@@ -266,7 +266,7 @@ class AnalysisManager(threading.Thread):
                    self.interface, self.machine.ip)
 
         if self.rt_table:
-            rooter("srcroute_enable", self.rt_table, self.machine.ip)
+            rooter("srcroute_enable", self.rt_table, self.machine.ip, self.interface)
 
         # Propagate the taken route to the database.
         self.db.set_route(self.task.id, route)

@@ -1,11 +1,15 @@
-# Copyright (C) 2010-2013 Claudio Guarnieri.
-# Copyright (C) 2014-2016 Cuckoo Foundation.
+# Copyright (C) 2010-2015 Cuckoo Foundation.
 # This file is part of Cuckoo Sandbox - http://www.cuckoosandbox.org
 # See the file 'docs/LICENSE' for copying permission.
 
 import os
 import shutil
 import logging
+
+try:
+    import re2 as re
+except ImportError:
+    import re
 
 from zipfile import ZipFile, BadZipfile
 
@@ -14,14 +18,20 @@ from lib.common.exceptions import CuckooPackageError
 
 log = logging.getLogger(__name__)
 
+
 class Zip(Package):
     """Zip analysis package."""
 
-    def extract_zip(self, zip_path, extract_path, password):
+    PATHS = [
+        ("SystemRoot", "system32", "cmd.exe"),
+    ]
+
+    def extract_zip(self, zip_path, extract_path, password, recursion_depth):
         """Extracts a nested ZIP file.
         @param zip_path: ZIP path
         @param extract_path: where to extract
         @param password: ZIP password
+        @param recursion_depth: how deep we are in a nested archive
         """
         # Test if zip file contains a file named as itself.
         if self.is_overwritten(zip_path):
@@ -44,11 +54,13 @@ class Zip(Package):
                     raise CuckooPackageError("Unable to extract Zip file: "
                                              "{0}".format(e))
             finally:
-                # Extract nested archives.
-                for name in archive.namelist():
-                    if name.endswith(".zip"):
-                        # Recurse.
-                        self.extract_zip(os.path.join(extract_path, name), extract_path, password)
+                if recursion_depth < 4:
+                    # Extract nested archives.
+                    for name in archive.namelist():
+                        if name.endswith(".zip"):
+                            # Recurse.
+                            self.extract_zip(os.path.join(extract_path, name), extract_path, password,
+                                             recursion_depth + 1)
 
     def is_overwritten(self, zip_path):
         """Checks if the ZIP file contains another file with the same name, so it is going to be overwritten.
@@ -77,21 +89,46 @@ class Zip(Package):
             raise CuckooPackageError("Invalid Zip file")
 
     def start(self, path):
-        password = self.options.get("password")
+        try:
+            root = os.environ["TEMP"]
+            password = self.options.get("password")
+            exe_regex = re.compile('(\.exe|\.scr|\.msi|\.bat|\.lnk|\.js)$', flags=re.IGNORECASE)
+            zipinfos = self.get_infos(path)
+            self.extract_zip(path, root, password, 0)
 
-        zipinfos = self.get_infos(path)
-        self.extract_zip(path, self.curdir, password)
+            file_name = self.options.get("file")
+            # If no file name is provided via option, take the first file.
+            if not file_name:
+                # No name provided try to find a better name.
+                if len(zipinfos):
+                    # Attempt to find a valid exe extension in the archive
+                    for f in zipinfos:
+                        if exe_regex.search(f.filename):
+                            file_name = f.filename
+                            break
+                    # Default to the first one if none found
+                    file_name = file_name if file_name else zipinfos[0].filename
+                    log.debug("Missing file option, auto executing: {0}".format(file_name))
+                else:
+                    raise CuckooPackageError("Empty ZIP archive")
 
-        file_name = self.options.get("file")
-        # If no file name is provided via option, take the first file.
-        if not file_name:
-            # No name provided try to find a better name.
-            if len(zipinfos):
-                # Take the first one.
-                file_name = zipinfos[0].filename
-                log.debug("Missing file option, auto executing: {0}".format(file_name))
+            file_path = os.path.join(root, file_name)
+            if file_name.lower().endswith(".lnk"):
+                cmd_path = self.get_path("cmd.exe")
+                cmd_args = "/c start /wait \"\" \"{0}\"".format(file_path)
+                return self.execute(cmd_path, cmd_args, file_path)
+            elif file_name.lower().endswith(".js"):
+                log.info("Sending {0} to wscript".format(file_path))
+                path32 = os.path.join(os.getenv("SystemRoot"), "System32", "wscript.exe")
+                path64 = os.path.join(os.getenv("SystemRoot"), "SysWOW64", "wscript.exe")
+                wscript_path = path64 if os.path.isfile(path64) else path32
+                if os.path.isfile(wscript_path):
+                    log.debug("Found wscript at {0}".format(wscript_path))
+                else:
+                    log.error("Couldn't find wscript at {0} or {1}".format(path32, path64))
+                return self.execute(wscript_path, [file_path],  trigger="file:%s" % file_path)
             else:
-                raise CuckooPackageError("Empty ZIP archive")
-
-        file_path = os.path.join(self.curdir, file_name)
-        return self.execute(file_path, self.options.get("arguments"))
+                return self.execute(file_path, self.options.get("arguments"), file_path)
+        except Exception as e:
+            log.exception("Failed to process zip")
+            log.error(e.message)

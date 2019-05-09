@@ -9,15 +9,19 @@ import json
 import logging
 import time
 import os
+import httplib
 
 from lib.cuckoo.common.abstracts import Report
 from lib.cuckoo.common.constants import CUCKOO_ROOT
 from lib.cuckoo.common.exceptions import CuckooDependencyError
 from lib.cuckoo.common.exceptions import CuckooReportError
 from lib.cuckoo.common.utils import convert_to_printable
+from lib.cuckoo.common.whitelist import is_whitelisted_url,is_whitelisted_ip,is_whitelisted_domain
 
 logging.getLogger("elasticsearch").setLevel(logging.WARNING)
 logging.getLogger("elasticsearch.trace").setLevel(logging.WARNING)
+
+httplib._MAXHEADERS=10000
 
 try:
     from elasticsearch import (
@@ -30,6 +34,89 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+
+def get_dict_value(obj, field, observable):
+    keys = field.split('.')
+    current = obj
+    idx = 0
+    if isinstance(current, list):
+        retlist = []
+        for item in current:
+            items = get_dict_value(item, '.'.join(keys), observable)
+            if items:
+                retlist.extend(items)
+        return retlist
+    for key in keys:
+        if isinstance(current, dict):
+            current = current.get(key, None)
+            if current is None:
+                return None
+            return get_dict_value(current,'.'.join(keys[1:]), observable)
+
+        if current is None or check_whitelists(current,observable) is None:
+            return None
+        if isinstance(current, basestring) and len(current) > 16000:
+            i=0
+            chunk_length=16000
+            max = len(current)
+            pieces = []
+            while i < max:
+                chunk_end = i + chunk_length
+                while i < chunk_end < len(current) and current[chunk_end] != " ":
+                    chunk_end -= 1
+                if chunk_end == i:
+                    # couldn't find a space
+                    chunk_end = i+chunk_length
+                piece = current[i:chunk_end]
+                i += len(piece)
+                pieces.append(piece)
+            return pieces
+            # return [current[i:i + 32765] for i in range(0, len(current), 32765)]
+
+        return [current]
+
+def check_whitelists(value, observable):
+    if (observable == "DOMAIN" and is_whitelisted_domain(value)) or \
+        (observable in ["DST","IP","SRC"] and is_whitelisted_ip(value) or \
+         (observable in ["URI_PATH", "URL","URL_PATH"]) and is_whitelisted_url(value)):
+        return None
+    return value
+
+def add_observables_to_object(obj,report):
+    as_template = {}
+    with open(os.path.join(CUCKOO_ROOT, "web", "advanced_search", "search", "fields.json"), 'r') as as_file:
+        as_template = json.load(as_file)
+    for observable in as_template:
+        obserValues = set()
+        for field in observable["fields"]:
+            value = get_dict_value(report, field, observable["name"])
+            if value:
+                obserValues.update(value)
+        obj.update({observable["name"]: list(obserValues)})
+    return obj
+
+
+def add_data_to_object(obj, report):
+    category = report['info']['category']
+    data= dict(md5=report["target"]["file"]["md5"] if category == "file" else report["target"]["url"],
+               ended=report["info"]["ended"], id=report["info"]["id"])
+    if 'behavior' in report:
+        data["processes"] = [process["command_line"] for process in report["behavior"]["processes"]]
+    myhttp = []
+    if ('network' in report) and ('https_ex' in report["network"]):
+        for mht in list(report["network"]["https_ex"] + report["network"]["http_ex"])[:4]:
+            if not is_whitelisted_domain(mht["host"]):
+                full_url = mht["protocol"] + '://' + mht["host"] + '/' + mht["uri"]
+                mht["full_url"] = full_url
+                myhttp.append(mht)
+
+    if myhttp:
+        data["http"] = myhttp
+
+    filename = os.path.basename(report["target"]["file"]["name"]) if category == "file" else "N/A"
+    data.update({"filename": filename})
+    obj["table_data"]=data
+    return obj
 
 class ElasticSearch(Report):
     """Stores report in Elasticsearch."""
@@ -55,9 +142,9 @@ class ElasticSearch(Report):
         if index_type.lower() == "yearly":
             strf_time = "%Y"
         elif index_type.lower() == "monthly":
-            strf_time = "%Y-%m"
+            strf_time = "%Y%m"
         elif index_type.lower() == "daily":
-            strf_time = "%Y-%m-%d"
+            strf_time = "%Y%m%d"
 
         date_index = datetime.datetime.utcnow().strftime(strf_time)
         self.dated_index = "%s-%s" % (self.index, date_index)
@@ -119,13 +206,13 @@ class ElasticSearch(Report):
         index = self.dated_index
 
         base_document = self.get_base_document()
-
         # Append the base document to the object to index.
+        # PHOENIX: Don't append the object, because the object is too deep now.  Just use search stuff.
         base_document.update(obj)
 
         try:
             self.es.index(
-                index=index, doc_type=self.report_type, body=base_document
+                index=index, doc_type=self.report_type, body=base_document, id=self.task["id"]
             )
         except Exception as e:
             raise CuckooReportError(
@@ -196,20 +283,22 @@ class ElasticSearch(Report):
             )
 
         self.connect()
-
-        # Index target information, the behavioral summary, and
-        # VirusTotal results.
-        self.do_index({
-            "cuckoo_node": self.options.get("cuckoo_node"), 
-            "target": results.get("target"),
+        obj={
+            # "cuckoo_node": self.options.get("cuckoo_node"),
+            # "target": results.get("target"),
             "tlp": self.task["tlp"],
             "owner": self.task["owner"],
-            "summary": results.get("behavior", {}).get("summary"),
-            "virustotal": results.get("virustotal"),
-            "irma": results.get("irma"),
-            "signatures": results.get("signatures"),
-            "dropped": results.get("dropped"),
-        })
+            # "summary": results.get("behavior", {}).get("summary"),
+            # "virustotal": results.get("virustotal"),
+            # "irma": results.get("irma"),
+            # "signatures": results.get("signatures"),
+            # "dropped": results.get("dropped"),
+        }
+        add_observables_to_object(obj,results)
+        add_data_to_object(obj,results)
+        # Index target information, the behavioral summary, and
+        # VirusTotal results.
+        self.do_index(obj)
 
         # Index the API calls.
         if self.options.get("calls"):

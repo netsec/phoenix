@@ -33,8 +33,16 @@ log = None
 # We keep a reporting queue with at most a few hundred entries.
 QUEUE_THRESHOLD = 128
 
-def process(target=None, copy_path=None, task=None, report=False, auto=False):
+
+def process(target=None, copy_path=None, task=None, report=False, auto=False, profile=False):
+    if profile:
+        import cProfile
+        profiler = cProfile.Profile()
+        profiler.enable()
     results = RunProcessing(task=task).run()
+    if profile:
+        profiler.disable()
+        profiler.dump_stats(str(task["id"])+".pstat")
     RunSignatures(results=results).run()
 
     if report:
@@ -48,12 +56,14 @@ def process(target=None, copy_path=None, task=None, report=False, auto=False):
                     os.path.exists(copy_path):
                 os.unlink(copy_path)
 
+
 def process_wrapper(*args, **kwargs):
     try:
         process(*args, **kwargs)
     except Exception as e:
         e.traceback = traceback.format_exc()
         raise e
+
 
 def init_worker():
     signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -73,10 +83,16 @@ def autoprocess(parallel=8):
     try:
         while True:
             # Pending results maintenance.
+            # log.info("COUNT== #%d", count)
+            # log.info("PENDING_RESULTS== #%d", len(pending_results))
+            # log.info("LAST SEEN == {0}".format(last_seen.strftime("%Y-%m-%d %H:%M:%S")))
+
+            #TODO: Need a cleaner way to do this and find out why we are hanging in the first place
             if len(pending_results) > 0 and last_seen < (datetime.now()-timedelta(minutes=15)):
                 log.fatal("Processing is hung, exiting and letting cuckoomonitor start again")
                 pool.terminate()
                 sys.exit(1)
+
             for tid, ar in pending_results.items():
                 if not ar.ready():
                     continue
@@ -202,6 +218,7 @@ def main():
     parser.add_argument("-p", "--parallel", help="Number of parallel threads to use (auto mode only).", type=int, required=False, default=1)
     parser.add_argument("-u", "--user", type=str, help="Drop user privileges to this user")
     parser.add_argument("-m", "--modules", help="Path to signature and reporting modules - overrides default modules path.", type=str, required=False)
+    parser.add_argument("--profile", help="Profile and save results as <report_id>.pstat", action="store_true", required=False)
 
     args = parser.parse_args()
 
@@ -231,9 +248,9 @@ def main():
                 "target": "",
                 "options": "",
             }
-            process(task=task, report=args.report)
+            process(task=task, report=args.report, profile=args.profile)
         else:
-            process(task=task.to_dict(), report=args.report)
+            process(task=task.to_dict(), report=args.report, profile=args.profile)
 
 if __name__ == "__main__":
     cfg = Config()

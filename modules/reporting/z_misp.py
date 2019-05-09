@@ -154,7 +154,7 @@ class MISP(Report):
                 if entry["host"] not in resolved_hosts:
                     continue
                 uri_ = "%s://%s%s" % (entry["protocol"], entry["host"], entry["uri"])
-                if (not is_whitelisted_domain(entry["host"])) and (not is_whitelisted_url(uri_) and (uri_ not in urls_added)):
+                if (not is_whitelisted_domain(entry["host"])) and (not is_whitelisted_url(uri_) and (uri_ not in urls_added) and "." in uri_):
                     ## Check to see if the response body hash matches the hash of any of the files dropped on the filesystem
                     fname = check_sha1_in_dropped(entry["sha1"],results)
                     if fname:
@@ -267,7 +267,7 @@ class MISP(Report):
                         continue
                     seen_urls.add(memurl)
                     domain = memurl.split('://')[1].split('/')[0]
-                    if (not is_whitelisted_url(memurl)) and (not is_whitelisted_domain(domain)):
+                    if (not is_whitelisted_url(memurl)) and (not is_whitelisted_domain(domain) and "." in memurl):
                         ## Create a URL object and related it if found in memory and not whitelisted
                         if memurl in urls_added and initial_file_object:
                             refs_to_add.append(self.create_reference(urls_added[memurl], initial_file_object, 'contained-within'))

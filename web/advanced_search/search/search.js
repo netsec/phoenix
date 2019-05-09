@@ -3,31 +3,34 @@ function outputJson(inp) {
 }
 
 function buildQuery(queryBuilderId) {
-    let rules = $('#' + queryBuilderId).queryBuilder('getRules');
-    let invisible = $('div#queryBuilderToo').length ? $('div#queryBuilderToo') : $('<div id="queryBuilderToo" display="none">');
-    let subFilters = [];
-    let seen = new Set();
-    $.getJSON("/static/fields.json", function (data) {
-
-        data.forEach(group => {
-            group.fields.forEach(field => {
-                if (!seen.has(field)) {
-                    subFilters.push({'id': field, 'type': group.type || "string"});
-                    seen.add(field);
-                }
-            })
+    let rules = $('#' + queryBuilderId).queryBuilder('getESBool');
+       post("/advanced_search/", {
+            "query": JSON.stringify(rules),
+            "lastRules": JSON.stringify( $('#' + queryBuilderId).queryBuilder('getRules'))
         });
-        invisible.queryBuilder({
-            filters: subFilters
-        });
-        let newRule = recurseRules(rules,data);
-        invisible.queryBuilder('setRules', newRule);
-        post("/advanced_search/", {
-            "query": JSON.stringify(invisible.queryBuilder('getMongo')),
-            "lastRules": JSON.stringify(rules)
-        });
-
-    });
+    // let invisible = $('div#queryBuilderToo').length ? $('div#queryBuilderToo') : $('<div id="queryBuilderToo" display="none">');
+    // let subFilters = [];
+    // let seen = new Set();
+    // $.getJSON("/static/fields.json", function (data) {
+    //     data.forEach(group => {
+    //         group.fields.forEach(field => {
+    //             if (!seen.has(field)) {
+    //                 subFilters.push({'id': field, 'type': group.type || "string"});
+    //                 seen.add(field);
+    //             }
+    //         })
+    //     });
+    //     invisible.queryBuilder({
+    //         filters: subFilters
+    //     });
+    //     let newRule = recurseRules(rules,data);
+    //     invisible.queryBuilder('setRules', newRule);
+    //     post("/advanced_search/", {
+    //         "query": JSON.stringify(invisible.queryBuilder('getESBool')),
+    //         "lastRules": JSON.stringify(rules)
+    //     });
+    //
+    // });
 }
 
 function recurseRules(group,data) {
