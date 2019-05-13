@@ -423,8 +423,10 @@
                             function (data, type, row) {
                                 var html = "<ul class=\"dont-break-out\">";
                                 data.forEach(function (process) {
-                                    html += "<li class=\"mono\">" + process.command_line.trunc(250) + "</li>";
-                                })
+                                    if (process.command_line) {
+                                        html += "<li class=\"mono\">" + process.command_line.trunc(250) + "</li>";
+                                    }
+                                });
                                 html += "</ul>";
                                 return html;
                             }

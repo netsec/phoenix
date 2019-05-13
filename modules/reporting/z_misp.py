@@ -124,12 +124,14 @@ class MISP(Report):
         event_obj.distribution = 4 if tlp == "amber" and sharing_group else 3
         event_obj.add_tag("tlp:{0}".format(tlp))
         resolved_hosts = set()
-
+        if 'network' in results and 'dns' in results['network']:
+            resolved_hosts = set(map(lambda hostreq:hostreq["request"],
+                filter(lambda host: not is_whitelisted_domain(host["request"]), results["network"]["dns"])))
         #self.misp.add_organisation(name="phoenix.beastmode.tools",description="Phoenix TLDR to MISP",)
         ## Go through the network traffic, try and correlate stage 1 -> stage 2
         if 'behavior' in results and 'summary' in results["behavior"]:
-                if 'resolves_host' in results["behavior"]["summary"]:
-                    resolved_hosts = set(filter(lambda host: not is_whitelisted_domain(host), results["behavior"]["summary"]["resolves_host"]))
+                # if 'resolves_host' in results["behavior"]["summary"]:
+                #     resolved_hosts = set(filter(lambda host: not is_whitelisted_domain(host), results["behavior"]["summary"]["resolves_host"]))
 
                 if 'connects_ip' in results["behavior"]["summary"]:
                     conn_added = []
@@ -157,6 +159,10 @@ class MISP(Report):
                 if (not is_whitelisted_domain(entry["host"])) and (not is_whitelisted_url(uri_) and (uri_ not in urls_added) and "." in uri_):
                     ## Check to see if the response body hash matches the hash of any of the files dropped on the filesystem
                     fname = check_sha1_in_dropped(entry["sha1"],results)
+                    if not fname and "200 OK" in entry["response"]:
+                        # If we didn't find it in dropped, but got a 200 OK, then the file was delivered, so make a file
+                        # object from the SHA1
+                        fname = entry["sha1"]
                     if fname:
                         ## We have a stage 1 -> stage 2 relationship.  Make the file object
                         file_object = self.make_file_object(fname, entry["path"], "Artifacts dropped")

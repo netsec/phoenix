@@ -521,12 +521,19 @@ def report(request, task_id):
         })
 
     # Creating dns information dicts by domain and ip.
-    if "network" in report and "domains" in report["network"]:
-        domainlookups = dict((i["domain"], i["ip"]) for i in report["network"]["domains"])
-        iplookups = dict((i["ip"], i["domain"]) for i in report["network"]["domains"])
-        for i in report["network"]["dns"]:
-            for a in i["answers"]:
-                iplookups[a["data"]] = i["request"]
+    if "network" in report:
+        if "domains" in report["network"]:
+            domainlookups = dict((i["domain"], i["ip"]) for i in report["network"]["domains"])
+            iplookups = dict((i["ip"], i["domain"]) for i in report["network"]["domains"])
+            for i in report["network"]["dns"]:
+                for a in i["answers"]:
+                    iplookups[a["data"]] = i["request"]
+        else:
+            domainlookups = dict()
+            iplookups = dict()
+        if "hosts" in report["network"]:
+            # Greasy hack to mitigate hundreds of thousands of hosts from worms
+            report["network"]["hosts"] =report["network"]["hosts"][:50]
     else:
         domainlookups = dict()
         iplookups = dict()

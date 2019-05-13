@@ -83,9 +83,9 @@ class Pcap(object):
         self.options = options
 
         # List of all hosts.
-        self.hosts = []
+        self.hosts = set()
         # List containing all non-private IP addresses.
-        self.unique_hosts = []
+        self.unique_hosts = set()
         # List of unique domains.
         self.unique_domains = []
         # List containing all TCP packets.
@@ -244,19 +244,19 @@ class Pcap(object):
                     # If the IP is not a local one, this might be a leftover
                     # packet as described in issue #249.
                     if self._is_private_ip(ip):
-                        self.hosts.append(ip)
+                        self.hosts.add(ip)
 
             if connection["dst"] not in self.hosts:
                 ip = convert_to_printable(connection["dst"])
 
                 if ip not in self.hosts:
-                    self.hosts.append(ip)
+                    self.hosts.add(ip)
 
                     # We add external IPs to the list, only the first time
                     # we see them and if they're the destination of the
                     # first packet they appear in.
                     if not self._is_private_ip(ip) and ip not in self.whitelist_ips:
-                        self.unique_hosts.append(ip)
+                        self.unique_hosts.add(ip)
         except:
             pass
 
@@ -754,7 +754,7 @@ class Pcap(object):
         self._process_smtp()
 
         # Build results dict.
-        self.results["hosts"] = self.unique_hosts
+        self.results["hosts"] = list(self.unique_hosts)
         self.results["domains"] = self.unique_domains
         self.results["tcp"] = [conn_from_flowtuple(i) for i in self.tcp_connections]
         self.results["udp"] = [conn_from_flowtuple(i) for i in self.udp_connections]
@@ -845,6 +845,7 @@ class Pcap2(object):
 
         return results
 
+
 class NetworkAnalysis(Processing):
     """Network analysis."""
 
@@ -917,6 +918,7 @@ class NetworkAnalysis(Processing):
             tlsmaster[client_random, server_random] = master_secret
         return tlsmaster
 
+
 def iplayer_from_raw(raw, linktype=1):
     """Converts a raw packet to a dpkt packet regarding of link type.
     @param raw: raw packet
@@ -933,12 +935,14 @@ def iplayer_from_raw(raw, linktype=1):
     else:
         raise CuckooProcessingError("unknown PCAP linktype")
 
+
 def conn_from_flowtuple(ft):
     """Convert the flow tuple into a dictionary (suitable for JSON)"""
     sip, sport, dip, dport, offset, relts = ft
     return {"src": sip, "sport": sport,
             "dst": dip, "dport": dport,
             "offset": offset, "time": relts}
+
 
 # input_iterator should be a class that also supports writing so we can use
 # it for the temp files
@@ -976,6 +980,7 @@ def batch_sort(input_iterator, output_path, buffer_size=32000, output_class=None
                 os.remove(chunk.name)
             except Exception:
                 pass
+
 
 class SortCap(object):
     """SortCap is a wrapper around the packet lib (dpkt) that allows us to sort pcaps
@@ -1026,11 +1031,13 @@ class SortCap(object):
         self.conns.add(flowtuple)
         return Keyed((flowtuple, ts, self.ctr), rpkt)
 
+
 def sort_pcap(inpath, outpath):
     """Use SortCap class together with batch_sort to sort a pcap"""
     inc = SortCap(inpath)
     batch_sort(inc, outpath, output_class=lambda path: SortCap(path, linktype=inc.linktype))
     return 0
+
 
 def flowtuple_from_raw(raw, linktype=1):
     """Parse a packet from a pcap just enough to gain a flow description tuple"""
@@ -1053,6 +1060,7 @@ def flowtuple_from_raw(raw, linktype=1):
     flowtuple = (sip, dip, sport, dport, proto)
     return flowtuple
 
+
 def payload_from_raw(raw, linktype=1):
     """Get the payload from a packet, the data below TCP/UDP basically"""
     ip = iplayer_from_raw(raw, linktype)
@@ -1060,6 +1068,7 @@ def payload_from_raw(raw, linktype=1):
         return ip.data.data
     except:
         return ""
+
 
 def next_connection_packets(piter, linktype=1):
     """Extract all packets belonging to the same flow from a pcap packet
@@ -1080,6 +1089,7 @@ def next_connection_packets(piter, linktype=1):
             "raw": payload_from_raw(raw, linktype).encode("base64"),
             "direction": first_ft == ft,
         }
+
 
 def packets_for_stream(fobj, offset):
     """Open a PCAP, seek to a packet offset, then get all packets belonging to
