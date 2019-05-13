@@ -27,11 +27,13 @@
                     if (rules)
                         $('#queryBuilder').queryBuilder({
                             filters: fields,
-                            rules: rules
+                            rules: rules,
+                            operators:["equal","not_equal","less","less_or_equal","greater","greater_or_equal","contains","between","in","not_in","is_null","is_not_null"]
                         });
                 {% else %}
                     $('#queryBuilder').queryBuilder({
-                        filters: fields
+                        filters: fields,
+                        operators:["equal","not_equal","less","less_or_equal","greater","greater_or_equal","contains","between","in","not_in","is_null","is_not_null"]
                     });
                 {% endif %}
             });
