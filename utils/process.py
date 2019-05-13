@@ -88,7 +88,7 @@ def autoprocess(parallel=8):
             # log.info("LAST SEEN == {0}".format(last_seen.strftime("%Y-%m-%d %H:%M:%S")))
 
             #TODO: Need a cleaner way to do this and find out why we are hanging in the first place
-            if len(pending_results) > 0 and last_seen < (datetime.now()-timedelta(minutes=15)):
+            if len(pending_results) > 0 and last_seen < (datetime.now()-timedelta(seconds=int(cfg.processing.processing_timeout))):
                 log.fatal("Processing is hung, exiting and letting cuckoomonitor start again")
                 pool.terminate()
                 sys.exit(1)
@@ -175,6 +175,9 @@ def autoprocess(parallel=8):
                 }
                 abortable_func = partial(abortable_worker, process_wrapper,orig_kwargs = kwargs, timeout=cfg.processing.processing_timeout, task_id=task.id)
                 result = pool.apply_async(abortable_func, args, kwargs)
+                if len(pending_results) == 0:
+                    # reset the loop protection timer as we are adding a new item after a while
+                    last_seen = datetime.now()
                 pending_results[task.id] = result
     except KeyboardInterrupt:
         pool.terminate()
